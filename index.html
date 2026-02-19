@@ -270,12 +270,8 @@
     function updateDropdownWithCustomFormulas() {
       const select = document.getElementById('dpExamples');
       // Remove old custom options
-      const options = Array.from(select.options);
-      options.forEach(opt => {
-        if (opt.dataset.custom === 'true') {
-          select.removeChild(opt);
-        }
-      });
+      const customOptions = Array.from(select.options).filter(opt => opt.dataset.custom === 'true');
+      customOptions.forEach(opt => select.removeChild(opt));
 
       // Add separator if there are custom formulas
       if (Object.keys(customFormulas).length > 0) {
@@ -299,7 +295,7 @@
     function promptSaveFormula() {
       const code = document.getElementById('dpCode').value.trim();
       if (!code) {
-        alert('Please enter a formula first!');
+        alert('Please enter a formula first.');
         return;
       }
 
@@ -318,7 +314,7 @@
       customFormulas[name] = code;
       saveCustomFormulas();
       updateDropdownWithCustomFormulas();
-      alert('Formula saved: ' + name);
+      alert('Successfully saved formula: ' + name);
     }
 
     function promptDeleteFormula() {
@@ -342,7 +338,7 @@
           delete customFormulas[trimmedName];
           saveCustomFormulas();
           updateDropdownWithCustomFormulas();
-          alert('Formula deleted: ' + trimmedName);
+          alert('Successfully deleted formula: ' + trimmedName);
         }
       } else {
         alert('Formula not found: ' + trimmedName);
