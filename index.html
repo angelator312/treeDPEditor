@@ -387,6 +387,8 @@
         { title: 'Access', items: [
           [dc('par(var)'), 'Access a variable on the parent node. Triggers top-down evaluation.'],
           [dc('len(arr)'), 'Array length.'],
+          [dc('allNodes()'), 'Returns array of all node IDs in the tree.'],
+          [dc('findNodes(condition)'), 'Returns array of node IDs where condition is true. Example: findNodes(val > 5)'],
         ]},
         { title: 'Array Builders', items: [
           [dc('range(n)'), 'Array [0, 1, ..., n-1].'],
@@ -535,6 +537,7 @@
         document.getElementById('tglTree').classList.toggle('active', state.isTree);
         document.getElementById('tglDirected').classList.toggle('active', state.isDirected);
         document.getElementById('tglShowEdgeW').classList.toggle('active', state.showEdgeW);
+        document.getElementById('dpWarning').classList.toggle('hidden', state.isTree);
         quickParseDpDefs(data.dpCode);
         return true;
       } catch (e) { return false; }
@@ -1041,6 +1044,20 @@
               const children = childrenMap[evalNodeId] || [];
               if (idx >= 0 && idx < children.length) return ev(args[1], children[idx]);
               return 0;
+            }
+
+            // ---- Node Filtering ----
+            if (name === 'allNodes') {
+              return state.nodes.map(n => n.id);
+            }
+
+            if (name === 'findNodes') {
+              if (args.length === 0) throw new Error('findNodes() requires a condition expression as an argument');
+              const result = [];
+              for (const node of state.nodes) {
+                if (ev(args[0], node.id)) result.push(node.id);
+              }
+              return result;
             }
 
             throw new Error(`Unknown function: ${name}`);
