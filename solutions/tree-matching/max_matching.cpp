@@ -8,12 +8,12 @@
  * A matching is a set of edges with no common vertices.
  * 
  * Approach:
- * - dp[u][0] = max matching in subtree of u where u is not matched
- * - dp[u][1] = max matching in subtree of u where u is matched with its parent
- * - For each child, we can either match it with u or not
- * - Complex transition considering all combinations
+ * - dp[u][0] = max matching in subtree of u where u is not matched with any edge
+ * - dp[u][1] = max matching in subtree of u where u is matched with parent edge
+ * - When u is not matched, we can either match it with a child or leave it unmatched
+ * - When u is matched with parent, children must use dp[v][0] (not matched with u)
  * 
- * Time Complexity: O(n)
+ * Time Complexity: O(n^2) or O(n) with optimization
  * Space Complexity: O(n)
  */
 
@@ -34,31 +34,32 @@ void dfs(int u, int parent) {
         }
     }
     
-    // dp[u][0]: u is not matched
-    // dp[u][1]: u is matched (with parent or a child)
-    
-    // If u is not matched, each child can be matched or not
+    // dp[u][0]: u is not matched with any edge
+    // Start by not matching u with any child
     dp[u][0] = 0;
     for (int v : children) {
-        dp[u][0] += max(dp[v][0], dp[v][1]);
-    }
-    
-    // If u is matched with parent, children are free
-    dp[u][1] = 0;
-    for (int v : children) {
-        dp[u][1] += max(dp[v][0], dp[v][1]);
+        // Child v can be unmatched or matched with one of its children
+        dp[u][0] += dp[v][0];
     }
     
     // Try matching u with each child
     for (int v : children) {
-        // Match u with v: gain = 1 + dp[v][0] + sum of other children's best
-        int matching_gain = 1 + dp[v][0];
+        // Match u with v: we get 1 edge, v uses dp[v][1] (matched with parent=u)
+        int matching_value = 1 + dp[v][1];
+        // Other children use dp[w][0] (not matched with u)
         for (int w : children) {
             if (w != v) {
-                matching_gain += max(dp[w][0], dp[w][1]);
+                matching_value += dp[w][0];
             }
         }
-        dp[u][0] = max(dp[u][0], matching_gain);
+        dp[u][0] = max(dp[u][0], matching_value);
+    }
+    
+    // dp[u][1]: u is matched with its parent edge
+    // All children must not be matched with u
+    dp[u][1] = 0;
+    for (int v : children) {
+        dp[u][1] += dp[v][0];
     }
 }
 
