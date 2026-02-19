@@ -8,12 +8,14 @@
  * A matching is a set of edges with no common vertices.
  * 
  * Approach:
- * - dp[u][0] = max matching in subtree of u where u is not matched with any edge
- * - dp[u][1] = max matching in subtree of u where u is matched with parent edge
- * - When u is not matched, we can either match it with a child or leave it unmatched
- * - When u is matched with parent, children must use dp[v][0] (not matched with u)
+ * - dp[u][0] = max matching in subtree of u where edge (u, parent) is NOT in the matching
+ * - dp[u][1] = max matching in subtree of u where edge (u, parent) IS in the matching
+ * - When computing dp[u][0], u can either:
+ *   1. Not be matched at all (children use dp[v][0])
+ *   2. Be matched with one child v (use 1 + dp[v][1] + sum of dp[w][0] for other children)
+ * - When computing dp[u][1], u is matched with parent, so children cannot match with u
  * 
- * Time Complexity: O(n^2) or O(n) with optimization
+ * Time Complexity: O(n) with optimization
  * Space Complexity: O(n)
  */
 
@@ -34,33 +36,24 @@ void dfs(int u, int parent) {
         }
     }
     
-    // dp[u][0]: u is not matched with any edge
-    // Start by not matching u with any child
+    // dp[u][0]: edge (u, parent) is NOT in the matching
+    // Start by not matching u with any child - all children use dp[v][0]
     dp[u][0] = 0;
     for (int v : children) {
-        // Child v can be unmatched or matched with one of its children
         dp[u][0] += dp[v][0];
     }
     
-    // Try matching u with each child
+    // Try matching u with each child (O(n) optimization)
+    int sum_dp0 = dp[u][0];  // Sum of all dp[v][0]
     for (int v : children) {
-        // Match u with v: we get 1 edge, v uses dp[v][1] (matched with parent=u)
-        int matching_value = 1 + dp[v][1];
-        // Other children use dp[w][0] (not matched with u)
-        for (int w : children) {
-            if (w != v) {
-                matching_value += dp[w][0];
-            }
-        }
+        // Match u with v: we get 1 edge + dp[v][1] + (sum of other children's dp[w][0])
+        int matching_value = 1 + dp[v][1] + (sum_dp0 - dp[v][0]);
         dp[u][0] = max(dp[u][0], matching_value);
     }
     
-    // dp[u][1]: u is matched with its parent edge
-    // All children must not be matched with u
-    dp[u][1] = 0;
-    for (int v : children) {
-        dp[u][1] += dp[v][0];
-    }
+    // dp[u][1]: edge (u, parent) IS in the matching
+    // All children must not be matched with u, so they use dp[v][0]
+    dp[u][1] = sum_dp0;
 }
 
 int main() {
