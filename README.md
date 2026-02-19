@@ -2,7 +2,7 @@
 
 An interactive **Graph Editor & Tree DP Visualizer** for competitive programming — build trees visually, write DP formulas in a mini DSL, run them, and see results on every node.
 
-**🔗 Live:** [https://angelator312.github.io/tree-dp-and-graph-editor/](https://angelator312.github.io/tree-dp-and-graph-editor/)
+**🔗 Live:** [https://angelator312.github.io/tree-dp-and-graph-editor/](https://angelator312.github.io/treeDPEditor/)
 
 ## ✨ Features
 
@@ -16,7 +16,7 @@ An interactive **Graph Editor & Tree DP Visualizer** for competitive programming
 
 ## 🚀 Quick Start
 
-1. Open the [live site](https://angelator312.github.io/tree-dp-and-graph-editor/)
+1. Open the [live site](https://angelator312.github.io/treeDPEditor/)
 2. Click **Add (A)** mode and click on the canvas to add nodes
 3. Switch to **Connect (C)** mode and click two nodes to create an edge
 4. Pick an example from the **Examples** dropdown, or write your own formula
