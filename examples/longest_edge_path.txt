@@ -1,0 +1,3 @@
+# Longest Path (Edge Weighted)
+# Enable "Edge W" toggle and set edge weights
+down = max(children, down + edgeWeight, 0)

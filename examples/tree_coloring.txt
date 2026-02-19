@@ -1,0 +1,4 @@
+# Tree Coloring (k=3 colors)
+# dp = number of valid colorings of subtree
+# Each child must differ from parent: (k-1) choices per child
+dp = isLeaf ? 1 : prod(children, 2 * dp)

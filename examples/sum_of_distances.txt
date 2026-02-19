@@ -1,0 +1,6 @@
+# Sum of Distances (Rerooting DP)
+# sz = subtree size, down = sum of distances downward
+# ans = total sum of distances when rerooted here
+sz = sum(children, sz) + 1
+down = sum(children, down + sz)
+ans = par(ans) - sz + (n - sz) + down

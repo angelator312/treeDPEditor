@@ -1,0 +1,5 @@
+# Tree Diameter
+# down = longest downward path from this node
+# diam = diameter passing through this node
+down = max(children, down + 1, 0)
+diam = max(sort(children, down + 1), 0) + (len(children) >= 2 ? sort(children, down + 1)[len(children) - 2] : 0)

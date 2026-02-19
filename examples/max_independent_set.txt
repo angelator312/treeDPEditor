@@ -1,0 +1,5 @@
+# Max Independent Set
+# dp0 = not taking this node
+# dp1 = taking this node
+dp0 = sum(children, max({dp0, dp1}))
+dp1 = sum(children, dp0) + val

@@ -10,9 +10,11 @@ An interactive **Graph Editor & Tree DP Visualizer** for competitive programming
 - **Tree DP Engine** — Write formulas, run with Ctrl+Enter, see results instantly
 - **30+ DSL Functions** — sum, prod, min, max, abs, gcd, lcm, filter, map, prefix, suffix, and more
 - **Pre-built Examples** — 9 classic tree DP problems ready to load (Subtree Size, Max Independent Set, Min Vertex Cover, Tree Diameter, Sum of Distances, Tree Matching, Tree Coloring, Longest Path)
+- **Custom Formulas** — Save your own formulas to the dropdown for quick access
 - **All Tree DP Types** — Subtree (bottom-up), Rerooting (top-down via `par()`), multi-state, edge-weighted
 - **CP Format Export** — Copy tree data in competitive programming format
 - **Undo/Redo, Import/Export, localStorage persistence**
+- **Example Files** — All example formulas available in the [`examples/`](examples/) folder
 
 ## 🚀 Quick Start
 

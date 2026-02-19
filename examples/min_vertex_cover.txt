@@ -1,0 +1,5 @@
+# Min Vertex Cover
+# dp0 = node NOT in cover (children must be)
+# dp1 = node IN cover
+dp0 = sum(children, dp1)
+dp1 = sum(children, min({dp0, dp1})) + 1

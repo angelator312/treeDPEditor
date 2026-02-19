@@ -141,7 +141,11 @@
                 <option value="longest_edge_path">Longest Path (Edge W)</option>
               </select>
             </div>
-            <button id="btnRunDp" class="btn text-xs px-3 py-1 rounded font-medium" style="background: var(--accent); color: var(--bg);">Run (Ctrl+Enter)</button>
+            <div class="flex gap-2">
+              <button id="btnSaveFormula" class="btn text-xs px-2 py-1 rounded font-medium" style="background: var(--border); color: var(--text);" title="Save current formula">💾</button>
+              <button id="btnDeleteFormula" class="btn text-xs px-2 py-1 rounded font-medium" style="background: var(--border); color: var(--text);" title="Delete saved formula">🗑️</button>
+              <button id="btnRunDp" class="btn text-xs px-3 py-1 rounded font-medium" style="background: var(--accent); color: var(--bg);">Run (Ctrl+Enter)</button>
+            </div>
           </div>
           <div id="dpErrorBox" class="error-box hidden"></div>
           <div id="dpWarning" class="hidden text-xs mb-2 p-2 rounded" style="background: rgba(255,170,0,0.2); color: var(--orange);">Warning: Tree Mode is disabled. DP requires a tree structure.</div>
@@ -237,6 +241,113 @@
       tree_coloring: `# Tree Coloring (k=3 colors)\n# dp = number of valid colorings of subtree\n# Each child must differ from parent: (k-1) choices per child\ndp = isLeaf ? 1 : prod(children, 2 * dp)`,
       longest_edge_path: `# Longest Path (Edge Weighted)\n# Enable "Edge W" toggle and set edge weights\ndown = max(children, down + edgeWeight, 0)`
     };
+
+    // =============================================
+    // CUSTOM FORMULAS
+    // =============================================
+    const CUSTOM_FORMULAS_KEY = 'tree_dp_custom_formulas';
+    let customFormulas = {};
+
+    function loadCustomFormulas() {
+      try {
+        const saved = localStorage.getItem(CUSTOM_FORMULAS_KEY);
+        if (saved) {
+          customFormulas = JSON.parse(saved);
+        }
+      } catch (e) {
+        customFormulas = {};
+      }
+    }
+
+    function saveCustomFormulas() {
+      try {
+        localStorage.setItem(CUSTOM_FORMULAS_KEY, JSON.stringify(customFormulas));
+      } catch (e) {
+        console.error('Failed to save custom formulas:', e);
+      }
+    }
+
+    function updateDropdownWithCustomFormulas() {
+      const select = document.getElementById('dpExamples');
+      // Remove old custom options
+      const options = Array.from(select.options);
+      options.forEach(opt => {
+        if (opt.dataset.custom === 'true') {
+          select.removeChild(opt);
+        }
+      });
+
+      // Add separator if there are custom formulas
+      if (Object.keys(customFormulas).length > 0) {
+        const separator = document.createElement('option');
+        separator.disabled = true;
+        separator.textContent = '──────────';
+        separator.dataset.custom = 'true';
+        select.appendChild(separator);
+
+        // Add custom formulas
+        Object.keys(customFormulas).sort().forEach(key => {
+          const opt = document.createElement('option');
+          opt.value = 'custom_' + key;
+          opt.textContent = '⭐ ' + key;
+          opt.dataset.custom = 'true';
+          select.appendChild(opt);
+        });
+      }
+    }
+
+    function promptSaveFormula() {
+      const code = document.getElementById('dpCode').value.trim();
+      if (!code) {
+        alert('Please enter a formula first!');
+        return;
+      }
+
+      let name = prompt('Enter a name for this formula:', '');
+      if (!name) return;
+      
+      name = name.trim();
+      if (name === '') return;
+
+      // Check if name conflicts with built-in examples
+      if (EXAMPLES[name]) {
+        alert('This name conflicts with a built-in example. Please choose a different name.');
+        return;
+      }
+
+      customFormulas[name] = code;
+      saveCustomFormulas();
+      updateDropdownWithCustomFormulas();
+      alert('Formula saved: ' + name);
+    }
+
+    function promptDeleteFormula() {
+      if (Object.keys(customFormulas).length === 0) {
+        alert('No custom formulas to delete.');
+        return;
+      }
+
+      const names = Object.keys(customFormulas).sort();
+      let message = 'Enter the name of the formula to delete:\n\n';
+      names.forEach((name, idx) => {
+        message += (idx + 1) + '. ' + name + '\n';
+      });
+
+      const name = prompt(message, '');
+      if (!name) return;
+
+      const trimmedName = name.trim();
+      if (customFormulas[trimmedName]) {
+        if (confirm('Delete formula "' + trimmedName + '"?')) {
+          delete customFormulas[trimmedName];
+          saveCustomFormulas();
+          updateDropdownWithCustomFormulas();
+          alert('Formula deleted: ' + trimmedName);
+        }
+      } else {
+        alert('Formula not found: ' + trimmedName);
+      }
+    }
 
     // =============================================
     // DOCS
@@ -1136,6 +1247,8 @@
 
       document.getElementById('btnDelSel').onclick = deleteSelected;
       document.getElementById('btnRunDp').onclick = runDP;
+      document.getElementById('btnSaveFormula').onclick = promptSaveFormula;
+      document.getElementById('btnDeleteFormula').onclick = promptDeleteFormula;
 
       document.getElementById('btnCopy').onclick = () => {
         navigator.clipboard.writeText(document.getElementById('textOutput').textContent);
@@ -1164,9 +1277,23 @@
 
       document.getElementById('dpExamples').onchange = e => {
         const val = e.target.value;
+        let code = null;
+        
+        // Check built-in examples
         if (val && EXAMPLES[val]) {
-          document.getElementById('dpCode').value = EXAMPLES[val];
-          quickParseDpDefs(EXAMPLES[val]);
+          code = EXAMPLES[val];
+        }
+        // Check custom formulas
+        else if (val && val.startsWith('custom_')) {
+          const customKey = val.substring(7); // Remove 'custom_' prefix
+          if (customFormulas[customKey]) {
+            code = customFormulas[customKey];
+          }
+        }
+        
+        if (code) {
+          document.getElementById('dpCode').value = code;
+          quickParseDpDefs(code);
           lastDpsLen = -1;
           updateDisplayOptions();
           saveToStorage();
@@ -1225,7 +1352,9 @@
 
       document.getElementById('docsContent').innerHTML = buildDocs();
 
+      loadCustomFormulas();
       loadFromStorage();
+      updateDropdownWithCustomFormulas();
       resize();
       bindEvents();
       saveHistory();
