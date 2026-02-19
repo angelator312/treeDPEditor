@@ -537,6 +537,7 @@
         document.getElementById('tglTree').classList.toggle('active', state.isTree);
         document.getElementById('tglDirected').classList.toggle('active', state.isDirected);
         document.getElementById('tglShowEdgeW').classList.toggle('active', state.showEdgeW);
+        document.getElementById('dpWarning').classList.toggle('hidden', state.isTree);
         quickParseDpDefs(data.dpCode);
         return true;
       } catch (e) { return false; }
