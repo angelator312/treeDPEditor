@@ -45,8 +45,8 @@ void dfs(int u, int parent) {
         dp[u][0] += best_v;
     }
     
-    // If u matches with one of its children
-    dp[u][0] = max(dp[u][0], dp[u][0] + max_gain);
+    // If u matches with one of its children (add the gain if positive)
+    dp[u][0] += max_gain;
     
     // If u is to be matched with parent
     dp[u][1] = 0;
