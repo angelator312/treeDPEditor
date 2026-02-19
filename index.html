@@ -76,7 +76,7 @@
   <div id="importModal" class="modal-overlay">
     <div class="modal">
       <h3 class="font-bold text-lg mb-2">Import / Reset</h3>
-      <p class="text-xs mb-2" style="color:var(--muted)">Format: V E, then V weights, then E lines of edges (u v w).</p>
+      <p class="text-xs mb-2" style="color:var(--muted)">Format A (edge list): Line 1 is <code>V E</code>, Line 2 is V weights, then E lines of edges (<code>u v w</code>).<br>Format B (parent array): Line 1 is <code>n</code>, Line 2 is n weights, Line 3 is <code>p2 p3 … pn</code> (parent of each node).</p>
       <textarea id="importText" class="w-full" rows="6" placeholder="3 2&#10;1 2 3&#10;1 2 1&#10;2 3 1"></textarea>
       <div class="flex justify-end gap-2 mt-3">
         <button id="btnResetSave" class="btn px-3 py-1.5 rounded text-xs mr-auto" style="background: var(--danger); color: white;">Reset Save</button>
@@ -668,17 +668,35 @@
         const text = document.getElementById('importText').value.trim();
         const lines = text.split('\n').map(l => l.trim()).filter(l => l);
         if (!lines.length) return;
-        const [V, E] = lines[0].split(/\s+/).map(Number);
+        const firstParts = lines[0].split(/\s+/).map(Number);
         state.nodes = []; state.edges = []; state.nextId = 1; state.dpResults = {}; state.dpGroups = [];
-        let hasWeights = false;
-        if (lines.length > 1) { const parts = lines[1].split(/\s+/); if (parts.length === V && !isNaN(parts[0])) hasWeights = true; }
-        for (let i = 1; i <= V; i++) state.nodes.push({ id: state.nextId++, x: 100 + (i % 5) * 100, y: 100 + Math.floor(i / 5) * 100, weight: 0 });
-        if (hasWeights) { const wArr = lines[1].split(/\s+/).map(Number); state.nodes.forEach((n, i) => n.weight = wArr[i] || 0); }
-        const startIdx = hasWeights ? 2 : 1;
-        for (let i = 0; i < E; i++) {
-          if (startIdx + i >= lines.length) break;
-          const parts = lines[startIdx + i].split(/\s+/).map(Number);
-          if (parts.length >= 2) state.edges.push({ id: Date.now() + i, source: parts[0], target: parts[1], weight: parts[2] || 0 });
+        if (firstParts.length === 1) {
+          // Format B: parent array format
+          const n = firstParts[0];
+          if (isNaN(n) || n < 1) throw new Error('Invalid n');
+          const wArr = lines.length > 1 ? lines[1].split(/\s+/).map(Number) : [];
+          if (wArr.length !== n) throw new Error('Weight count mismatch');
+          for (let i = 1; i <= n; i++) state.nodes.push({ id: state.nextId++, x: 100 + (i % 5) * 100, y: 100 + Math.floor(i / 5) * 100, weight: wArr[i - 1] || 0 });
+          if (n > 1) {
+            const parents = lines.length > 2 ? lines[2].split(/\s+/).map(Number) : [];
+            if (parents.length !== n - 1) throw new Error('Parent count mismatch');
+            parents.forEach((p, idx) => {
+              state.edges.push({ id: Date.now() + idx, source: p, target: idx + 2, weight: 0 });
+            });
+          }
+        } else {
+          // Format A: edge list format
+          const [V, E] = firstParts;
+          let hasWeights = false;
+          if (lines.length > 1) { const parts = lines[1].split(/\s+/); if (parts.length === V && !isNaN(parts[0])) hasWeights = true; }
+          for (let i = 1; i <= V; i++) state.nodes.push({ id: state.nextId++, x: 100 + (i % 5) * 100, y: 100 + Math.floor(i / 5) * 100, weight: 0 });
+          if (hasWeights) { const wArr = lines[1].split(/\s+/).map(Number); state.nodes.forEach((n, i) => n.weight = wArr[i] || 0); }
+          const startIdx = hasWeights ? 2 : 1;
+          for (let i = 0; i < E; i++) {
+            if (startIdx + i >= lines.length) break;
+            const parts = lines[startIdx + i].split(/\s+/).map(Number);
+            if (parts.length >= 2) state.edges.push({ id: Date.now() + i, source: parts[0], target: parts[1], weight: parts[2] || 0 });
+          }
         }
         autoLayout(); saveHistory(); fullUpdate();
         document.getElementById('importModal').classList.remove('active');
