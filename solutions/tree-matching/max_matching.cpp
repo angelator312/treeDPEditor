@@ -26,33 +26,39 @@ int dp[MAXN][2];
 int n;
 
 void dfs(int u, int parent) {
-    dp[u][0] = 0;  // u not matched
-    dp[u][1] = 0;  // u matched with parent (invalid initially)
-    
-    int max_gain = 0;  // maximum gain from matching u with a child
-    
+    vector<int> children;
     for (int v : adj[u]) {
-        if (v == parent) continue;
-        dfs(v, u);
-        
-        // Best option for v when u is not matched
-        int best_v = max(dp[v][0], dp[v][1]);
-        
-        // Gain from matching u with v
-        int gain = (1 + dp[v][0]) - best_v;
-        max_gain = max(max_gain, gain);
-        
-        dp[u][0] += best_v;
+        if (v != parent) {
+            dfs(v, u);
+            children.push_back(v);
+        }
     }
     
-    // If u matches with one of its children (add the gain if positive)
-    dp[u][0] += max_gain;
+    // dp[u][0]: u is not matched
+    // dp[u][1]: u is matched (with parent or a child)
     
-    // If u is to be matched with parent
+    // If u is not matched, each child can be matched or not
+    dp[u][0] = 0;
+    for (int v : children) {
+        dp[u][0] += max(dp[v][0], dp[v][1]);
+    }
+    
+    // If u is matched with parent, children are free
     dp[u][1] = 0;
-    for (int v : adj[u]) {
-        if (v == parent) continue;
+    for (int v : children) {
         dp[u][1] += max(dp[v][0], dp[v][1]);
+    }
+    
+    // Try matching u with each child
+    for (int v : children) {
+        // Match u with v: gain = 1 + dp[v][0] + sum of other children's best
+        int matching_gain = 1 + dp[v][0];
+        for (int w : children) {
+            if (w != v) {
+                matching_gain += max(dp[w][0], dp[w][1]);
+            }
+        }
+        dp[u][0] = max(dp[u][0], matching_gain);
     }
 }
 
