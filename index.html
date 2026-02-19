@@ -1051,7 +1051,7 @@
             }
 
             if (name === 'findNodes') {
-              if (args.length === 0) throw new Error('findNodes() requires a condition argument');
+              if (args.length === 0) throw new Error('findNodes() requires a condition expression as an argument');
               const result = [];
               for (const node of state.nodes) {
                 if (ev(args[0], node.id)) result.push(node.id);
