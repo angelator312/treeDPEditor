@@ -76,6 +76,7 @@
                 <option value="tree_matching">Tree Matching</option>
                 <option value="tree_coloring">Tree Coloring (k=3)</option>
                 <option value="longest_edge_path">Longest Path (Edge W)</option>
+                <option value="bundle_example">Bundle (Interdependent DP)</option>
               </select>
             </div>
             <div class="flex gap-2">
@@ -473,9 +474,10 @@
           { key: 'childCount', label: 'childCount' }, { key: 'isLeaf', label: 'isLeaf' }
         ];
         let html = staticOpts.map(o => `<label class="cb-container"><input type="checkbox" ${state.display[o.key] ? 'checked' : ''} data-opt="${o.key}"><span class="cb-box"></span>${o.label}</label>`).join('');
-        if (state.dpGroups.length > 0) {
+        const nonBundleGroups = state.dpGroups.filter(g => !g.name.startsWith('__bundle_'));
+        if (nonBundleGroups.length > 0) {
           html += `<div class="w-full border-t my-1" style="border-color:var(--border)"></div>`;
-          html += state.dpGroups.map(g => `<label class="cb-container"><input type="checkbox" ${state.display[g.name] ? 'checked' : ''} data-opt="${g.name}"><span class="cb-box"></span>${g.name}</label>`).join('');
+          html += nonBundleGroups.map(g => `<label class="cb-container"><input type="checkbox" ${state.display[g.name] ? 'checked' : ''} data-opt="${g.name}"><span class="cb-box"></span>${g.name}</label>`).join('');
         }
         displayContainer.innerHTML = html;
       }
@@ -506,7 +508,28 @@
       if (!state.nodes.length) { el.innerHTML = '<p class="p-2 text-xs opacity-60">No data</p>'; return; }
       const rows = [...state.nodes].sort((a, b) => a.id - b.id);
       if (rows.length > MAX_TABLE_ROWS) { el.innerHTML = `<p class="p-2 text-xs opacity-60">Too large (${rows.length}).</p>`; return; }
-      el.innerHTML = `<table><thead><tr><th>ID</th><th>W</th>${state.dpGroups.map(g => `<th>${g.name}</th>`).join('')}</tr></thead><tbody>${rows.map(n => `<tr><td style="color:var(--accent)">${n.id}</td><td>${n.weight}</td>${state.dpGroups.map(g => `<td style="color:var(--purple)">${formatVal(state.dpResults[n.id]?.[g.name])}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+      
+      // Build header with all DP columns (excluding bundles and locals)
+      const dpCols = [];
+      const seenCols = new Set();
+      
+      state.dpGroups.forEach(g => {
+        if (!g.name.startsWith('__bundle_')) {
+          dpCols.push({ type: 'group', name: g.name });
+          seenCols.add(g.name);
+        } else {
+          // For bundles, add individual DP columns
+          g.lines.forEach(line => {
+            const dpName = line.target.includes(':') ? line.target.split(':')[0].trim() : line.target.trim();
+            if (!seenCols.has(dpName)) {
+              dpCols.push({ type: 'bundle', name: dpName, target: line.target });
+              seenCols.add(dpName);
+            }
+          });
+        }
+      });
+      
+      el.innerHTML = `<table><thead><tr><th>ID</th><th>W</th>${dpCols.map(col => `<th>${col.name}</th>`).join('')}</tr></thead><tbody>${rows.map(n => `<tr><td style="color:var(--accent)">${n.id}</td><td>${n.weight}</td>${dpCols.map(col => `<td style="color:var(--purple)">${formatVal(state.dpResults[n.id]?.[col.target || col.name])}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
     }
 
     function showSelInfo() {
@@ -631,10 +654,23 @@
         if (state.display.val) parts.push(`w:${n.weight}`);
         if (state.display.childCount) parts.push(`c:${(childrenMap[n.id] || []).length}`);
         if (state.display.isLeaf) parts.push(`l:${(childrenMap[n.id] || []).length === 0 ? 1 : 0}`);
+        
+        // Display regular DP groups
         state.dpGroups.forEach(g => {
-          if (state.display[g.name]) {
+          if (!g.name.startsWith('__bundle_') && state.display[g.name]) {
             const val = state.dpResults[n.id]?.[g.name];
             if (val !== undefined) parts.push(`${g.name}:${formatVal(val)}`);
+          }
+        });
+        
+        // Display bundle DP values
+        state.dpGroups.forEach(g => {
+          if (g.name.startsWith('__bundle_')) {
+            g.lines.forEach(line => {
+              const dpName = line.target.includes(':') ? line.target.split(':')[0].trim() : line.target.trim();
+              const val = state.dpResults[n.id]?.[line.target];
+              if (val !== undefined) parts.push(`${dpName}:${formatVal(val)}`);
+            });
           }
         });
 

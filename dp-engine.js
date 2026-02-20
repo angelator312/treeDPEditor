@@ -10,7 +10,8 @@ const EXAMPLES = {
   sum_of_distances: `# Sum of Distances (Rerooting DP)\n# sz = subtree size, down = sum of distances downward\n# ans = total sum of distances when rerooted here\nsz = sum(children, sz) + 1\ndown = sum(children, down + sz)\nans = par(ans) - sz + (n - sz) + down`,
   tree_matching: `# Tree Matching\n# dp0 = max matching if this node NOT matched\n# dp1 = max matching if this node IS matched to a child\ndp0 = sum(children, max({dp0, dp1}))\ndp1 = max(children, sum(children, max({dp0, dp1})) - max({dp0, dp1}) + dp0 + 1, 0)`,
   tree_coloring: `# Tree Coloring (k=3 colors)\n# dp = number of valid colorings of subtree\n# Each child must differ from parent: (k-1) choices per child\ndp = isLeaf ? 1 : prod(children, 2 * dp)`,
-  longest_edge_path: `# Longest Path (Edge Weighted)\n# Enable "Edge W" toggle and set edge weights\ndown = max(children, down + edgeWeight, 0)`
+  longest_edge_path: `# Longest Path (Edge Weighted)\n# Enable "Edge W" toggle and set edge weights\ndown = max(children, down + edgeWeight, 0)`,
+  bundle_example: `# Bundle Example (Interdependent DP)\n# All lines in {} execute in order for each node\n{\ndp2 = isLeaf ? 0 : sum(children, dp1)\ndp1 = isLeaf ? 0 : dp2 + max(children, 1 - dp1 + dp2)\n}`
 };
 
 // =============================================
@@ -75,6 +76,10 @@ function buildDocs() {
     { title: 'Arrays', items: [
       [dc('{a, b, c}'), 'Array literal.'],
       [dc('arr[i]'), 'Array indexing (safe: returns 0 if out of bounds).'],
+    ]},
+    { title: 'Bundles', items: [
+      [dc('{ ... }'), 'Group of DP assignments. All lines execute in order on each node, allowing interdependencies.'],
+      ['Example:', 'All inner DPs ({dp1, dp2, ...}) can depend on each other within the same node.'],
     ]},
     { title: 'Operators', items: [
       [dc('+ - * / % ^'), 'Arithmetic (% = modulo, ^ = power).'],
@@ -183,7 +188,34 @@ function quickParseDpDefs(code) {
   if (!code) return;
   try {
     const groups = {};
-    code.split('\n').map(l => l.replace(/#.*$/, '').trim()).filter(l => l.includes('=')).forEach(l => {
+    const bundles = [];
+    const lines = code.split('\n').map(l => l.replace(/#.*$/, '').trim());
+    
+    // Extract bundle blocks first
+    let processedLines = [];
+    let inBundle = false;
+    let bundleLines = [];
+    
+    lines.forEach((line, idx) => {
+      if (line === '{') {
+        inBundle = true;
+        bundleLines = [];
+      } else if (line === '}') {
+        if (inBundle && bundleLines.length > 0) {
+          bundles.push(bundleLines);
+          processedLines.push(`__BUNDLE_${bundles.length - 1}__`);
+        }
+        inBundle = false;
+        bundleLines = [];
+      } else if (inBundle) {
+        if (line.includes('=')) bundleLines.push(line);
+      } else if (line) {
+        processedLines.push(line);
+      }
+    });
+
+    // Parse regular groups
+    processedLines.filter(l => l.includes('=') && !l.startsWith('__BUNDLE')).forEach(l => {
       const eqIdx = l.indexOf('=');
       // skip == and !=
       if (l[eqIdx + 1] === '=' || (eqIdx > 0 && l[eqIdx - 1] === '!')) return;
@@ -192,10 +224,26 @@ function quickParseDpDefs(code) {
       let dpName;
       if (lhs.includes(':')) dpName = lhs.substring(0, lhs.indexOf(':')).trim();
       else dpName = lhs;
-      if (!groups[dpName]) groups[dpName] = { name: dpName, lines: [], locals: new Set(), isTopDown: false };
+      if (!groups[dpName]) groups[dpName] = { name: dpName, lines: [], locals: new Set(), isTopDown: false, isBundle: false };
       if (lhs.includes(':')) groups[dpName].locals.add(lhs.split(':')[1].trim());
       try { groups[dpName].lines.push({ target: lhs, ast: Parser.parse(rhs) }); } catch (e) { /* skip */ }
     });
+    
+    // Parse bundles
+    bundles.forEach((bundleLines, idx) => {
+      const bundleName = `__bundle_${idx}`;
+      const bundleGroup = { name: bundleName, lines: [], locals: new Set(), isTopDown: false, isBundle: true };
+      bundleLines.forEach(l => {
+        const eqIdx = l.indexOf('=');
+        if (l[eqIdx + 1] === '=' || (eqIdx > 0 && l[eqIdx - 1] === '!')) return;
+        const lhs = l.substring(0, eqIdx).trim();
+        const rhs = l.substring(eqIdx + 1).trim();
+        if (lhs.includes(':')) bundleGroup.locals.add(lhs.split(':')[1].trim());
+        try { bundleGroup.lines.push({ target: lhs, ast: Parser.parse(rhs) }); } catch (e) { /* skip */ }
+      });
+      groups[bundleName] = bundleGroup;
+    });
+    
     state.dpGroups = Object.values(groups);
     state.dpGroups.forEach(g => { if (state.display[g.name] === undefined) state.display[g.name] = false; });
   } catch (e) { /* skip */ }
@@ -211,19 +259,64 @@ function runDP() {
   errorBox.classList.add('hidden');
 
   try {
-    // Parse groups
+    // Parse groups and bundles
     const groups = {};
-    code.split('\n').map(l => l.replace(/#.*$/, '').trim()).filter(l => l.includes('=')).forEach(l => {
+    const bundleDefs = [];
+    const lines = code.split('\n').map(l => l.replace(/#.*$/, '').trim());
+    
+    // Extract bundle blocks first
+    let processedLines = [];
+    let inBundle = false;
+    let bundleLines = [];
+    
+    lines.forEach((line, idx) => {
+      if (line === '{') {
+        inBundle = true;
+        bundleLines = [];
+      } else if (line === '}') {
+        if (inBundle && bundleLines.length > 0) {
+          bundleDefs.push(bundleLines);
+          processedLines.push(`__BUNDLE_${bundleDefs.length - 1}__`);
+        }
+        inBundle = false;
+        bundleLines = [];
+      } else if (inBundle) {
+        if (line.includes('=')) bundleLines.push(line);
+      } else if (line) {
+        processedLines.push(line);
+      }
+    });
+
+    // Parse regular groups
+    processedLines.filter(l => l.includes('=') && !l.startsWith('__BUNDLE')).forEach(l => {
       const eqIdx = l.indexOf('=');
       if (l[eqIdx + 1] === '=' || (eqIdx > 0 && l[eqIdx - 1] === '!') || (eqIdx > 0 && l[eqIdx - 1] === '<') || (eqIdx > 0 && l[eqIdx - 1] === '>')) return;
       const lhs = l.substring(0, eqIdx).trim();
       const rhs = l.substring(eqIdx + 1).trim();
       let dpName, isLocal = false;
       if (lhs.includes(':')) { dpName = lhs.substring(0, lhs.indexOf(':')).trim(); isLocal = true; } else dpName = lhs;
-      if (!groups[dpName]) groups[dpName] = { name: dpName, lines: [], locals: new Set(), isTopDown: false };
+      if (!groups[dpName]) groups[dpName] = { name: dpName, lines: [], locals: new Set(), isTopDown: false, isBundle: false };
       if (isLocal) groups[dpName].locals.add(lhs.split(':')[1].trim());
       try { groups[dpName].lines.push({ target: lhs, ast: Parser.parse(rhs) }); }
       catch (err) { throw new Error(`Parse error in "${l}": ${err.message}`); }
+    });
+
+    // Parse bundles
+    bundleDefs.forEach((bundleLines, idx) => {
+      const bundleName = `__bundle_${idx}`;
+      const bundleGroup = { name: bundleName, lines: [], locals: new Set(), isTopDown: false, isBundle: true };
+      bundleLines.forEach(l => {
+        const eqIdx = l.indexOf('=');
+        if (l[eqIdx + 1] === '=' || (eqIdx > 0 && l[eqIdx - 1] === '!') || (eqIdx > 0 && l[eqIdx - 1] === '<') || (eqIdx > 0 && l[eqIdx - 1] === '>')) return;
+        const lhs = l.substring(0, eqIdx).trim();
+        const rhs = l.substring(eqIdx + 1).trim();
+        let dpName, isLocal = false;
+        if (lhs.includes(':')) { dpName = lhs.substring(0, lhs.indexOf(':')).trim(); isLocal = true; } else dpName = lhs;
+        if (isLocal) bundleGroup.locals.add(lhs.split(':')[1].trim());
+        try { bundleGroup.lines.push({ target: lhs, ast: Parser.parse(rhs) }); }
+        catch (err) { throw new Error(`Parse error in bundle line "${l}": ${err.message}`); }
+      });
+      groups[bundleName] = bundleGroup;
     });
 
     state.dpGroups = Object.values(groups);
@@ -268,6 +361,32 @@ function runDP() {
     // Results
     const results = {};
     state.nodes.forEach(n => results[n.id] = {});
+
+    // Separate bundles and regular groups
+    const bundles = state.dpGroups.filter(g => g.isBundle);
+    const regularGroups = state.dpGroups.filter(g => !g.isBundle);
+
+    // Execute DP groups
+    const postOrder = (u, fn) => { childrenMap[u].forEach(c => postOrder(c, fn)); fn(u); };
+    const preOrder = (u, fn) => { fn(u); childrenMap[u].forEach(c => preOrder(c, fn)); };
+
+    // Execute regular groups first
+    regularGroups.forEach(g => {
+      const fn = u => { g.lines.forEach(line => { results[u][line.target] = evalAST(line.ast, u, g.name, u, g.locals); }); };
+      if (g.isTopDown) roots.forEach(r => preOrder(r, fn));
+      else roots.forEach(r => postOrder(r, fn));
+    });
+
+    // Execute bundles (process all lines in order for each node)
+    bundles.forEach(bundle => {
+      const fn = u => { 
+        bundle.lines.forEach(line => { 
+          results[u][line.target] = evalAST(line.ast, u, bundle.name, u, bundle.locals); 
+        }); 
+      };
+      if (bundle.isTopDown) roots.forEach(r => preOrder(r, fn));
+      else roots.forEach(r => postOrder(r, fn));
+    });
 
     // GCD helper
     const gcd2 = (a, b) => { a = Math.abs(Math.round(a)); b = Math.abs(Math.round(b)); while (b) { [a, b] = [b, a % b]; } return a; };
@@ -542,16 +661,6 @@ function runDP() {
 
       return 0;
     };
-
-    // Execute DP groups
-    const postOrder = (u, fn) => { childrenMap[u].forEach(c => postOrder(c, fn)); fn(u); };
-    const preOrder = (u, fn) => { fn(u); childrenMap[u].forEach(c => preOrder(c, fn)); };
-
-    state.dpGroups.forEach(g => {
-      const fn = u => { g.lines.forEach(line => { results[u][line.target] = evalAST(line.ast, u, g.name, u, g.locals); }); };
-      if (g.isTopDown) roots.forEach(r => preOrder(r, fn));
-      else roots.forEach(r => postOrder(r, fn));
-    });
 
     state.dpResults = results;
     fullUpdate();
