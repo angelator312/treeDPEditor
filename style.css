@@ -55,6 +55,9 @@ th, td { padding: 4px 8px; text-align: left; border-bottom: 1px solid var(--bord
 
 .error-box { background: rgba(255, 68, 102, 0.1); border: 1px solid rgba(255, 68, 102, 0.3); color: #ff8a9e; padding: 8px 12px; border-radius: 6px; font-size: 11px; margin-bottom: 8px; font-family: 'JetBrains Mono'; white-space: pre-wrap; }
 
+#dpCode { transition: all 0.2s; }
+#dpCode.focused { border-color: var(--accent); background: var(--bg-elevated); box-shadow: 0 0 12px rgba(0, 212, 170, 0.3); }
+
 .doc-code { background: var(--bg); border: 1px solid var(--border); padding: 2px 5px; border-radius: 4px; color: var(--purple); font-family: 'JetBrains Mono', monospace; font-size: 11px; }
 .doc-section { margin-bottom: 12px; }
 .doc-section-title { color: var(--accent); font-weight: 600; display: block; margin-bottom: 6px; font-size: 12px; }
