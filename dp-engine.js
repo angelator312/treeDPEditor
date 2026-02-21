@@ -370,24 +370,6 @@ function runDP() {
     const postOrder = (u, fn) => { childrenMap[u].forEach(c => postOrder(c, fn)); fn(u); };
     const preOrder = (u, fn) => { fn(u); childrenMap[u].forEach(c => preOrder(c, fn)); };
 
-    // Execute regular groups first
-    regularGroups.forEach(g => {
-      const fn = u => { g.lines.forEach(line => { results[u][line.target] = evalAST(line.ast, u, g.name, u, g.locals); }); };
-      if (g.isTopDown) roots.forEach(r => preOrder(r, fn));
-      else roots.forEach(r => postOrder(r, fn));
-    });
-
-    // Execute bundles (process all lines in order for each node)
-    bundles.forEach(bundle => {
-      const fn = u => { 
-        bundle.lines.forEach(line => { 
-          results[u][line.target] = evalAST(line.ast, u, bundle.name, u, bundle.locals); 
-        }); 
-      };
-      if (bundle.isTopDown) roots.forEach(r => preOrder(r, fn));
-      else roots.forEach(r => postOrder(r, fn));
-    });
-
     // GCD helper
     const gcd2 = (a, b) => { a = Math.abs(Math.round(a)); b = Math.abs(Math.round(b)); while (b) { [a, b] = [b, a % b]; } return a; };
 
@@ -661,6 +643,24 @@ function runDP() {
 
       return 0;
     };
+
+    // Execute regular groups first
+    regularGroups.forEach(g => {
+      const fn = u => { g.lines.forEach(line => { results[u][line.target] = evalAST(line.ast, u, g.name, u, g.locals); }); };
+      if (g.isTopDown) roots.forEach(r => preOrder(r, fn));
+      else roots.forEach(r => postOrder(r, fn));
+    });
+
+    // Execute bundles (process all lines in order for each node)
+    bundles.forEach(bundle => {
+      const fn = u => { 
+        bundle.lines.forEach(line => { 
+          results[u][line.target] = evalAST(line.ast, u, bundle.name, u, bundle.locals); 
+        }); 
+      };
+      if (bundle.isTopDown) roots.forEach(r => preOrder(r, fn));
+      else roots.forEach(r => postOrder(r, fn));
+    });
 
     state.dpResults = results;
     fullUpdate();
