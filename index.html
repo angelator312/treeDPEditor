@@ -396,16 +396,16 @@
     function selectObj(obj) {
       state.multiSelected = new Set([obj.id]);
       state.selected = { type: 'node', id: obj.id };
-      showSelInfo(); render();
+      render();
     }
-    function selectEdge(obj) { state.selected = { type: 'edge', id: obj.id }; showSelInfo(); render(); }
+    function selectEdge(obj) { state.selected = { type: 'edge', id: obj.id }; render(); }
 
     function selectMultiToggle(nodeId) {
       if (state.multiSelected.has(nodeId)) state.multiSelected.delete(nodeId);
       else state.multiSelected.add(nodeId);
       const size = state.multiSelected.size;
       state.selected = size === 1 ? { type: 'node', id: [...state.multiSelected][0] } : null;
-      showSelInfo(); render();
+      render();
     }
 
     function startRubberBand(x, y) {
@@ -422,7 +422,7 @@
       );
       state.selected = null;
       state.rubberBand = null;
-      showSelInfo(); render();
+      render();
     }
 
     function updateSelXY(axis, value) {
@@ -466,7 +466,7 @@
       render(); updateOutput(); saveToStorage();
     }
 
-    function fullUpdate() { render(); updateOutput(); showSelInfo(); updateDataTable(); updateDisplayOptions(); }
+    function fullUpdate() { render(); updateOutput(); updateDataTable(); updateDisplayOptions(); }
 
     function importData() {
       try {
@@ -887,8 +887,8 @@
         ctx.strokeStyle = 'rgba(0,212,170,0.6)'; ctx.lineWidth = 1.5;
         ctx.setLineDash([4, 3]); ctx.stroke(); ctx.setLineDash([]);
       }
+      showSelInfo();
     }
-
     // =============================================
     // EVENT BINDING
     // =============================================
