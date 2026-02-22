@@ -144,6 +144,18 @@
           </div>
           <label class="block text-xs opacity-60 mb-1">Weight</label>
           <input type="number" id="selWeight" class="w-full">
+          <div id="selXYGroup" class="hidden mt-2">
+            <div class="flex gap-2">
+              <div class="flex-1">
+                <label class="block text-xs opacity-60 mb-1">X</label>
+                <input type="number" id="selX" class="w-full">
+              </div>
+              <div class="flex-1">
+                <label class="block text-xs opacity-60 mb-1">Y</label>
+                <input type="number" id="selY" class="w-full">
+              </div>
+            </div>
+          </div>
           <div id="selDpVals" class="hidden mt-2 text-xs"></div>
         </div>
       </div>
@@ -161,7 +173,9 @@
       isTree: true, isDirected: true, showEdgeW: false,
       dpResults: {}, dpGroups: [],
       display: { id: true, val: true, childCount: false, isLeaf: false },
-      dpFocused: false
+      dpFocused: false,
+      multiSelected: new Set(),
+      rubberBand: null
     };
     const hist = { stack: [], idx: -1 };
     const STORAGE_KEY = 'tree_dp_editor_v2';
@@ -323,7 +337,7 @@
         hist.idx--;
         const snap = JSON.parse(hist.stack[hist.idx]);
         state.nodes = snap.nodes; state.edges = snap.edges; state.nextId = snap.nextId;
-        state.selected = null; state.dpResults = {}; fullUpdate();
+        state.selected = null; state.multiSelected = new Set(); state.dpResults = {}; fullUpdate();
       }
     };
     const redo = () => {
@@ -331,7 +345,7 @@
         hist.idx++;
         const snap = JSON.parse(hist.stack[hist.idx]);
         state.nodes = snap.nodes; state.edges = snap.edges; state.nextId = snap.nextId;
-        state.selected = null; state.dpResults = {}; fullUpdate();
+        state.selected = null; state.multiSelected = new Set(); state.dpResults = {}; fullUpdate();
       }
     };
 
@@ -347,6 +361,7 @@
 
     function setMode(m) {
       state.mode = m; state.connectSource = null;
+      state.multiSelected = new Set(); state.selected = null;
       document.getElementById('btnAdd').classList.toggle('active', m === 'add');
       document.getElementById('btnConnect').classList.toggle('active', m === 'connect');
       document.getElementById('btnSelect').classList.toggle('active', m === 'select');
@@ -378,22 +393,71 @@
       return true;
     }
 
-    function selectObj(obj) { state.selected = { type: 'node', id: obj.id }; showSelInfo(); render(); }
+    function selectObj(obj) {
+      state.multiSelected = new Set([obj.id]);
+      state.selected = { type: 'node', id: obj.id };
+      showSelInfo(); render();
+    }
     function selectEdge(obj) { state.selected = { type: 'edge', id: obj.id }; showSelInfo(); render(); }
 
+    function selectMultiToggle(nodeId) {
+      if (state.multiSelected.has(nodeId)) state.multiSelected.delete(nodeId);
+      else state.multiSelected.add(nodeId);
+      const size = state.multiSelected.size;
+      state.selected = size === 1 ? { type: 'node', id: [...state.multiSelected][0] } : null;
+      showSelInfo(); render();
+    }
+
+    function startRubberBand(x, y) {
+      state.rubberBand = { x1: x, y1: y, x2: x, y2: y };
+    }
+
+    function commitRubberBand() {
+      if (!state.rubberBand) return;
+      const { x1, y1, x2, y2 } = state.rubberBand;
+      const minX = Math.min(x1, x2), maxX = Math.max(x1, x2);
+      const minY = Math.min(y1, y2), maxY = Math.max(y1, y2);
+      state.multiSelected = new Set(
+        state.nodes.filter(n => n.x >= minX && n.x <= maxX && n.y >= minY && n.y <= maxY).map(n => n.id)
+      );
+      state.selected = null;
+      state.rubberBand = null;
+      showSelInfo(); render();
+    }
+
+    function updateSelXY(axis, value) {
+      const v = parseFloat(value);
+      if (isNaN(v)) return;
+      const nodes = [...state.multiSelected].map(id => state.nodes.find(n => n.id === id)).filter(Boolean);
+      if (!nodes.length) return;
+      const centroid = nodes.reduce((s, n) => s + (axis === 'x' ? n.x : n.y), 0) / nodes.length;
+      const delta = v - centroid;
+      nodes.forEach(n => { if (axis === 'x') n.x += delta; else n.y += delta; });
+      render(); updateOutput(); saveToStorage();
+    }
+
     function deleteSelected() {
-      if (!state.selected) return;
-      if (state.selected.type === 'node') {
-        state.nodes = state.nodes.filter(n => n.id !== state.selected.id);
-        state.edges = state.edges.filter(e => e.source !== state.selected.id && e.target !== state.selected.id);
-      } else {
-        state.edges = state.edges.filter(e => e.id !== state.selected.id);
+      if (state.multiSelected.size > 0) {
+        const ids = state.multiSelected;
+        state.nodes = state.nodes.filter(n => !ids.has(n.id));
+        state.edges = state.edges.filter(e => !ids.has(e.source) && !ids.has(e.target));
+        state.multiSelected = new Set(); state.selected = null;
+        state.dpResults = {}; fullUpdate(); saveHistory();
+        return;
       }
+      if (!state.selected) return;
+      if (state.selected.type === 'edge')
+        state.edges = state.edges.filter(e => e.id !== state.selected.id);
       state.selected = null; state.dpResults = {}; fullUpdate(); saveHistory();
     }
 
     function updateSelectedWeight(v) {
-      const w = parseFloat(v) || 0;
+      const w = parseFloat(v);
+      if (isNaN(w)) return;
+      if (state.multiSelected.size > 0) {
+        state.multiSelected.forEach(id => { const n = state.nodes.find(x => x.id === id); if (n) n.weight = w; });
+        render(); updateOutput(); saveToStorage(); return;
+      }
       if (!state.selected) return;
       const obj = state.selected.type === 'node'
         ? state.nodes.find(n => n.id === state.selected.id)
@@ -637,17 +701,43 @@
 
     function showSelInfo() {
       const info = document.getElementById('selInfo');
+      const xyGroup = document.getElementById('selXYGroup');
+      const dpVals = document.getElementById('selDpVals');
+      const count = state.multiSelected.size;
+
+      if (count > 1) {
+        info.classList.remove('hidden');
+        document.getElementById('selName').textContent = `${count} nodes`;
+        const nodes = [...state.multiSelected].map(id => state.nodes.find(n => n.id === id)).filter(Boolean);
+        const ws = nodes.map(n => n.weight);
+        const wInput = document.getElementById('selWeight');
+        const allSame = ws.length > 0 && ws.every(w => w === ws[0]);
+        wInput.value = allSame ? ws[0] : ''; wInput.placeholder = allSame ? '' : 'mixed';
+        const cx = nodes.reduce((s, n) => s + n.x, 0) / nodes.length;
+        const cy = nodes.reduce((s, n) => s + n.y, 0) / nodes.length;
+        document.getElementById('selX').value = Math.round(cx);
+        document.getElementById('selY').value = Math.round(cy);
+        xyGroup.classList.remove('hidden'); dpVals.classList.add('hidden'); return;
+      }
+
       if (!state.selected) { info.classList.add('hidden'); return; }
+
       info.classList.remove('hidden');
       const isNode = state.selected.type === 'node';
       const obj = isNode ? state.nodes.find(n => n.id === state.selected.id) : state.edges.find(e => e.id === state.selected.id);
       if (!obj) { info.classList.add('hidden'); return; }
       document.getElementById('selName').textContent = isNode ? `Node ${obj.id}` : `Edge ${obj.source}→${obj.target}`;
-      document.getElementById('selWeight').value = obj.weight;
-      const dpVals = document.getElementById('selDpVals');
+      const wInput = document.getElementById('selWeight');
+      wInput.value = obj.weight; wInput.placeholder = '';
+      if (isNode) {
+        document.getElementById('selX').value = Math.round(obj.x);
+        document.getElementById('selY').value = Math.round(obj.y);
+        xyGroup.classList.remove('hidden');
+      } else { xyGroup.classList.add('hidden'); }
       if (isNode && state.dpResults[obj.id]) {
         dpVals.classList.remove('hidden');
-        dpVals.innerHTML = Object.entries(state.dpResults[obj.id]).filter(([k]) => !k.includes(':')).map(([k, v]) => `<span style="margin-right:8px"><span style="color:var(--accent)">${k}</span>: ${formatVal(v)}</span>`).join('');
+        dpVals.innerHTML = Object.entries(state.dpResults[obj.id]).filter(([k]) => !k.includes(':'))
+          .map(([k, v]) => `<span style="margin-right:8px"><span style="color:var(--accent)">${k}</span>: ${formatVal(v)}</span>`).join('');
       } else dpVals.classList.add('hidden');
     }
 
@@ -732,7 +822,7 @@
 
       // Draw nodes
       state.nodes.forEach(n => {
-        const sel = state.selected?.id === n.id;
+        const sel = state.multiSelected.has(n.id);
         const isConnectSource = state.connectSource?.id === n.id;
         
         // Draw connect source indicator
@@ -787,6 +877,16 @@
           ctx.fillText(parts.join(' | '), n.x, n.y + (state.display.id ? 10 : 4));
         }
       });
+
+      if (state.rubberBand) {
+        const rb = state.rubberBand;
+        const x = Math.min(rb.x1, rb.x2), y = Math.min(rb.y1, rb.y2);
+        const w = Math.abs(rb.x2 - rb.x1), h = Math.abs(rb.y2 - rb.y1);
+        ctx.beginPath(); ctx.rect(x, y, w, h);
+        ctx.fillStyle = 'rgba(0,212,170,0.08)'; ctx.fill();
+        ctx.strokeStyle = 'rgba(0,212,170,0.6)'; ctx.lineWidth = 1.5;
+        ctx.setLineDash([4, 3]); ctx.stroke(); ctx.setLineDash([]);
+      }
     }
 
     // =============================================
@@ -861,6 +961,14 @@
       selWeightInput.onchange = e => { updateSelectedWeight(e.target.value); saveHistory(); };
       selWeightInput.oninput = e => updateSelectedWeight(e.target.value);
 
+      const selXInput = document.getElementById('selX');
+      selXInput.onchange = e => { updateSelXY('x', e.target.value); saveHistory(); };
+      selXInput.oninput  = e => updateSelXY('x', e.target.value);
+
+      const selYInput = document.getElementById('selY');
+      selYInput.onchange = e => { updateSelXY('y', e.target.value); saveHistory(); };
+      selYInput.oninput  = e => updateSelXY('y', e.target.value);
+
       document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.onclick = () => {
           document.querySelectorAll('.tab-btn').forEach(t => t.classList.remove('active'));
@@ -925,12 +1033,27 @@
           render();
         } else {
           if (node) {
-            state.dragging = { id: node.id, ox: pos.x - node.x, oy: pos.y - node.y };
-            selectObj(node);
+            if (ev.shiftKey || ev.ctrlKey || ev.metaKey) {
+              selectMultiToggle(node.id);
+            } else if (state.multiSelected.has(node.id) && state.multiSelected.size > 1) {
+              const basePositions = {};
+              state.multiSelected.forEach(id => {
+                const n = state.nodes.find(x => x.id === id);
+                if (n) basePositions[id] = { x: n.x, y: n.y };
+              });
+              state.dragging = { type: 'multi', basePositions, startX: pos.x, startY: pos.y };
+            } else {
+              state.multiSelected = new Set([node.id]);
+              state.selected = { type: 'node', id: node.id };
+              state.dragging = { type: 'single', id: node.id, ox: pos.x - node.x, oy: pos.y - node.y };
+              showSelInfo();
+            }
           } else if (edge) {
+            state.multiSelected = new Set();
             selectEdge(edge);
           } else {
-            state.selected = null;
+            state.multiSelected = new Set(); state.selected = null;
+            startRubberBand(pos.x, pos.y);
             showSelInfo();
           }
           render();
@@ -939,9 +1062,19 @@
 
       canvas.onmousemove = ev => {
         if (state.dragging) {
-          const n = state.nodes.find(x => x.id === state.dragging.id);
-          if (n) { n.x = ev.offsetX - state.dragging.ox; n.y = ev.offsetY - state.dragging.oy; render(); }
+          if (state.dragging.type === 'multi') {
+            const dx = ev.offsetX - state.dragging.startX, dy = ev.offsetY - state.dragging.startY;
+            state.multiSelected.forEach(id => {
+              const n = state.nodes.find(x => x.id === id), base = state.dragging.basePositions[id];
+              if (n && base) { n.x = base.x + dx; n.y = base.y + dy; }
+            });
+            render();
+          } else {
+            const n = state.nodes.find(x => x.id === state.dragging.id);
+            if (n) { n.x = ev.offsetX - state.dragging.ox; n.y = ev.offsetY - state.dragging.oy; render(); }
+          }
         }
+        if (state.rubberBand) { state.rubberBand.x2 = ev.offsetX; state.rubberBand.y2 = ev.offsetY; render(); }
         // Track mouse position for connect mode preview line
         if (state.mode === 'connect') {
           state.mousePos = { x: ev.offsetX, y: ev.offsetY };
@@ -949,9 +1082,10 @@
         }
       };
 
-      const stopDrag = () => { 
-        if (state.dragging) saveHistory(); 
+      const stopDrag = () => {
+        if (state.dragging) saveHistory();
         state.dragging = null;
+        if (state.rubberBand) commitRubberBand();
       };
       canvas.onmouseup = stopDrag;
       canvas.onmouseleave = () => {
