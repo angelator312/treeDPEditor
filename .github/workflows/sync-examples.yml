@@ -1,0 +1,27 @@
+name: Sync examples
+
+on:
+  push:
+    branches: [main]
+    paths: ['examples/**']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  regenerate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate dp-examples.js
+        run: python3 scripts/generate_examples.py
+
+      - name: Commit if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add dp-engine/dp-examples.js
+          git diff --cached --quiet || git commit -m "chore: regenerate dp-examples.js from examples/"
+          git push
