@@ -1,187 +1,4 @@
 // =============================================
-// EXAMPLES
-// =============================================
-const EXAMPLES = {
-  subtree_size: `# Subtree Size\nsz = sum(children, sz) + 1`,
-  subtree_sum: `# Subtree Sum\ndp = val + sum(children, dp)`,
-  max_independent: `# Max Independent Set\n# dp0 = not taking this node\n# dp1 = taking this node\ndp0 = sum(children, max({dp0, dp1}))\ndp1 = sum(children, dp0) + val`,
-  min_vertex_cover: `# Min Vertex Cover\n# dp0 = node NOT in cover (children must be)\n# dp1 = node IN cover\ndp0 = sum(children, dp1)\ndp1 = sum(children, min({dp0, dp1})) + 1`,
-  tree_diameter: `# Tree Diameter\n# down = longest downward path from this node\n# diam = diameter passing through this node\ndown = max(children, down + 1, 0)\ndiam = max(sort(children, down + 1), 0) + (len(children) >= 2 ? sort(children, down + 1)[len(children) - 2] : 0)`,
-  sum_of_distances: `# Sum of Distances (Rerooting DP)\n# sz = subtree size, down = sum of distances downward\n# ans = total sum of distances when rerooted here\nsz = sum(children, sz) + 1\ndown = sum(children, down + sz)\nans = par(ans) - sz + (n - sz) + down`,
-  tree_matching: `# Tree Matching\n# dp0 = max matching if this node NOT matched\n# dp1 = max matching if this node IS matched to a child\ndp0 = sum(children, max({dp0, dp1}))\ndp1 = max(children, sum(children, max({dp0, dp1})) - max({dp0, dp1}) + dp0 + 1, 0)`,
-  tree_coloring: `# Tree Coloring (k=3 colors)\n# dp = number of valid colorings of subtree\n# Each child must differ from parent: (k-1) choices per child\ndp = isLeaf ? 1 : prod(children, 2 * dp)`,
-  longest_edge_path: `# Longest Path (Edge Weighted)\n# Enable "Edge W" toggle and set edge weights\ndown = max(children, down + edgeWeight, 0)`,
-  bundle_example: `# Bundle Example (Interdependent DP)\n# All lines in {} execute in order for each node\n{\ndp2 = isLeaf ? 0 : sum(children, dp1)\ndp1 = isLeaf ? 0 : dp2 + max(children, 1 - dp1 + dp2)\n}`
-};
-
-// =============================================
-// DOCS
-// =============================================
-function buildDocs() {
-  const dc = s => `<code class="doc-code">${s}</code>`;
-  const sections = [
-    { title: 'Variables', items: [
-      [dc('val'), 'Node weight.'],
-      [dc('children'), 'Array of child node IDs.'],
-      [dc('edgeWeight'), 'Edge weight from parent to this node.'],
-      [dc('id'), 'Node ID.'],
-      [dc('childCount'), 'Number of children.'],
-      [dc('isLeaf'), '1 if leaf node, 0 otherwise.'],
-      [dc('depth'), 'Depth from root (root = 0).'],
-      [dc('subtreeSize'), 'Number of nodes in subtree (including self).'],
-      [dc('n'), 'Total number of nodes in the tree.'],
-    ]},
-    { title: 'Aggregation', items: [
-      [dc('sum(arr, expr?)'), 'Sum values. Maps expr over each element if provided.'],
-      [dc('prod(arr, expr?)'), 'Product of values.'],
-      [dc('max(arr, expr?, def?)'), 'Maximum value. Returns def if empty (default: -Infinity).'],
-      [dc('min(arr, expr?, def?)'), 'Minimum value. Returns def if empty (default: Infinity).'],
-      [dc('count(arr, expr?)'), 'Count elements (or count where expr ≠ 0).'],
-      [dc('avg(arr, expr?, def?)'), 'Average. Returns def if empty (default: 0).'],
-    ]},
-    { title: 'Math', items: [
-      [dc('abs(x)'), 'Absolute value.'],
-      [dc('floor(x)'), 'Floor.'],
-      [dc('ceil(x)'), 'Ceiling.'],
-      [dc('sqrt(x)'), 'Square root.'],
-      [dc('log(x)'), 'Natural logarithm.'],
-      [dc('log2(x)'), 'Base-2 logarithm.'],
-      [dc('pow(base, exp)'), 'Power.'],
-      [dc('mod(a, b)'), 'Modulo (returns 0 if b=0).'],
-      [dc('gcd(a, b)'), 'Greatest common divisor.'],
-      [dc('lcm(a, b)'), 'Least common multiple.'],
-      [dc('sign(x)'), 'Sign: -1, 0, or 1.'],
-      [dc('clamp(x, lo, hi)'), 'Clamp x to [lo, hi].'],
-    ]},
-    { title: 'Access', items: [
-      [dc('par(var)'), 'Access a variable on the parent node. Triggers top-down evaluation.'],
-      [dc('len(arr)'), 'Array length.'],
-      [dc('allNodes()'), 'Returns array of all node IDs in the tree.'],
-      [dc('findNodes(condition)'), 'Returns array of node IDs where condition is true. Example: findNodes(val > 5)'],
-    ]},
-    { title: 'Array Builders', items: [
-      [dc('range(n)'), 'Array [0, 1, ..., n-1].'],
-      [dc('map(arr, expr)'), 'Map expression over array (element becomes eval context).'],
-      [dc('filter(arr, expr)'), 'Keep elements where expr ≠ 0.'],
-      [dc('sort(arr, expr?)'), 'Sort array. If expr provided, sorts by mapped value.'],
-      [dc('reverse(arr)'), 'Reverse array.'],
-      [dc('concat(a, b)'), 'Concatenate two arrays.'],
-      [dc('unique(arr)'), 'Remove duplicate values.'],
-      [dc('flatten(arr)'), 'Flatten nested arrays one level.'],
-      [dc('prefix(arr, "op")'), 'Prefix accumulation. op: "sum", "max", "min", "prod".'],
-      [dc('suffix(arr, "op")'), 'Suffix accumulation.'],
-      [dc('slice(arr, start, end?)'), 'Array slice.'],
-      [dc('indexOf(arr, val)'), 'Index of value (-1 if not found).'],
-    ]},
-    { title: 'Arrays', items: [
-      [dc('{a, b, c}'), 'Array literal.'],
-      [dc('arr[i]'), 'Array indexing (safe: returns 0 if out of bounds).'],
-    ]},
-    { title: 'Bundles', items: [
-      [dc('{ ... }'), 'Group of DP assignments. All lines execute in order on each node, allowing interdependencies.'],
-      ['Example:', 'All inner DPs ({dp1, dp2, ...}) can depend on each other within the same node.'],
-    ]},
-    { title: 'Operators', items: [
-      [dc('+ - * / % ^'), 'Arithmetic (% = modulo, ^ = power).'],
-      [dc('== != &lt; &gt; &lt;= &gt;='), 'Comparison (returns 0 or 1).'],
-      [dc('&amp;&amp; || !'), 'Logical AND, OR, NOT.'],
-      [dc('cond ? then : else'), 'Ternary conditional.'],
-    ]},
-  ];
-  return sections.map(s => `<div class="doc-section"><span class="doc-section-title">${s.title}</span><ul class="doc-list">${s.items.map(([c, d]) => `<li>${c} ${d}</li>`).join('')}</ul></div>`).join('');
-}
-
-// =============================================
-// PARSER
-// =============================================
-const Parser = {
-  tokenize(code) {
-    const tokens = [];
-    const regex = /\s*(!=|<=|>=|==|&&|\|\||\.\.|=>|[+\-*\/\^%?:(),.[\]{}<>!]|\d+\.?\d*|"[^"]*"|[a-zA-Z_][a-zA-Z0-9_]*)\s*/g;
-    let match;
-    while ((match = regex.exec(code)) !== null) if (match[1]) tokens.push(match[1]);
-    return tokens;
-  },
-  parse(code) {
-    const tokens = this.tokenize(code);
-    let pos = 0;
-    const peek = () => tokens[pos];
-    const consume = (expected) => {
-      const t = tokens[pos++];
-      if (expected && t !== expected) throw new Error(`Expected '${expected}' but got '${t || 'EOF'}'`);
-      return t;
-    };
-
-    const expr = () => {
-      let node = or();
-      if (peek() === '?') {
-        consume();
-        const t = expr();
-        consume(':');
-        const f = expr();
-        node = { type: 'ternary', cond: node, t, f };
-      }
-      return node;
-    };
-    const or = () => { let l = and(); while (peek() === '||') { consume(); l = { type: 'binop', op: '||', l, r: and() }; } return l; };
-    const and = () => { let l = eq(); while (peek() === '&&') { consume(); l = { type: 'binop', op: '&&', l, r: eq() }; } return l; };
-    const eq = () => { let l = cmp(); while (peek() === '==' || peek() === '!=') { const op = consume(); l = { type: 'binop', op, l, r: cmp() }; } return l; };
-    const cmp = () => { let l = add(); while (['<', '>', '<=', '>='].includes(peek())) { const op = consume(); l = { type: 'binop', op, l, r: add() }; } return l; };
-    const add = () => { let l = mul(); while (peek() === '+' || peek() === '-') { const op = consume(); l = { type: 'binop', op, l, r: mul() }; } return l; };
-    const mul = () => { let l = modop(); while (peek() === '*' || peek() === '/') { const op = consume(); l = { type: 'binop', op, l, r: modop() }; } return l; };
-    const modop = () => { let l = powop(); while (peek() === '%') { consume(); l = { type: 'binop', op: '%', l, r: powop() }; } return l; };
-    const powop = () => { let l = unary(); if (peek() === '^') { consume(); return { type: 'binop', op: '^', l, r: powop() }; } return l; };
-
-    const unary = () => {
-      if (peek() === '-') { consume(); return { type: 'unary', op: '-', arg: unary() }; }
-      if (peek() === '!') { consume(); return { type: 'unary', op: '!', arg: unary() }; }
-      return postfix();
-    };
-
-    const postfix = () => {
-      let node = atom();
-      while (peek() === '[') {
-        consume();
-        const index = expr();
-        consume(']');
-        node = { type: 'index', target: node, index };
-      }
-      return node;
-    };
-
-    const atom = () => {
-      const t = peek();
-      if (t === '(') { consume(); const n = expr(); consume(')'); return n; }
-      if (t === '{') {
-        consume();
-        const items = [];
-        if (peek() !== '}') { items.push(expr()); while (peek() === ',') { consume(); items.push(expr()); } }
-        consume('}');
-        return { type: 'array', items };
-      }
-      if (t && t.startsWith('"')) { consume(); return { type: 'str', val: t.slice(1, -1) }; }
-      if (t && /^\d/.test(t)) { consume(); return { type: 'num', val: parseFloat(t) }; }
-      if (t && /^[a-zA-Z_]/.test(t)) {
-        consume();
-        if (peek() === '(') {
-          consume();
-          const args = [];
-          if (peek() !== ')') { args.push(expr()); while (peek() === ',') { consume(); args.push(expr()); } }
-          consume(')');
-          return { type: 'call', name: t, args };
-        }
-        return { type: 'var', name: t };
-      }
-      if (pos < tokens.length) consume(); // skip unknown
-      return { type: 'num', val: 0 };
-    };
-
-    const result = expr();
-    return result;
-  }
-};
-
-// =============================================
 // QUICK PARSE DP DEFS
 // =============================================
 function quickParseDpDefs(code) {
@@ -190,12 +7,12 @@ function quickParseDpDefs(code) {
     const groups = {};
     const bundles = [];
     const lines = code.split('\n').map(l => l.replace(/#.*$/, '').trim());
-    
+
     // Extract bundle blocks first
     let processedLines = [];
     let inBundle = false;
     let bundleLines = [];
-    
+
     lines.forEach((line, idx) => {
       if (line === '{') {
         inBundle = true;
@@ -228,7 +45,7 @@ function quickParseDpDefs(code) {
       if (lhs.includes(':')) groups[dpName].locals.add(lhs.split(':')[1].trim());
       try { groups[dpName].lines.push({ target: lhs, ast: Parser.parse(rhs) }); } catch (e) { /* skip */ }
     });
-    
+
     // Parse bundles
     bundles.forEach((bundleLines, idx) => {
       const bundleName = `__bundle_${idx}`;
@@ -243,7 +60,7 @@ function quickParseDpDefs(code) {
       });
       groups[bundleName] = bundleGroup;
     });
-    
+
     state.dpGroups = Object.values(groups);
     state.dpGroups.forEach(g => { if (state.display[g.name] === undefined) state.display[g.name] = false; });
   } catch (e) { /* skip */ }
@@ -263,12 +80,12 @@ function runDP() {
     const groups = {};
     const bundleDefs = [];
     const lines = code.split('\n').map(l => l.replace(/#.*$/, '').trim());
-    
+
     // Extract bundle blocks first
     let processedLines = [];
     let inBundle = false;
     let bundleLines = [];
-    
+
     lines.forEach((line, idx) => {
       if (line === '{') {
         inBundle = true;
@@ -653,10 +470,10 @@ function runDP() {
 
     // Execute bundles (process all lines in order for each node)
     bundles.forEach(bundle => {
-      const fn = u => { 
-        bundle.lines.forEach(line => { 
-          results[u][line.target] = evalAST(line.ast, u, bundle.name, u, bundle.locals); 
-        }); 
+      const fn = u => {
+        bundle.lines.forEach(line => {
+          results[u][line.target] = evalAST(line.ast, u, bundle.name, u, bundle.locals);
+        });
       };
       if (bundle.isTopDown) roots.forEach(r => preOrder(r, fn));
       else roots.forEach(r => postOrder(r, fn));
