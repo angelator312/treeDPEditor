@@ -133,8 +133,10 @@
             <span class="text-xs font-semibold">Selected: <span id="selName" class="mono" style="color: var(--accent);"></span></span>
             <button id="btnDelSel" class="text-xs px-2 py-0.5 rounded" style="background: var(--danger); cursor:pointer; border:none; color:white;">Del</button>
           </div>
-          <label class="block text-xs opacity-60 mb-1">Weight</label>
-          <input type="number" id="selWeight" class="w-full">
+          <div id="weightsContainer"></div>
+          <div id="weightAddRow" class="hidden mt-1">
+            <button id="btnAddWeight" class="text-xs px-2 py-0.5 rounded" style="background: var(--card); cursor:pointer; border:1px solid var(--border); color:var(--fg);" onclick="addWeightToNode()">+ Weight</button>
+          </div>
           <div id="selXYGroup" class="hidden mt-2">
             <div class="flex gap-2">
               <div class="flex-1">

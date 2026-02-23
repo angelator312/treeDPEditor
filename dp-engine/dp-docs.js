@@ -5,7 +5,9 @@ function buildDocs() {
   const dc = s => `<code class="doc-code">${s}</code>`;
   const sections = [
     { title: 'Variables', items: [
-      [dc('val'), 'Node weight.'],
+      [dc('val'), 'First (or only) node weight.'],
+      [dc('val1'), 'Second node weight (when multiple weights are set).'],
+      [dc('val2'), 'Third node weight (when multiple weights are set).'],
       [dc('children'), 'Array of child node IDs.'],
       [dc('edgeWeight'), 'Edge weight from parent to this node.'],
       [dc('id'), 'Node ID.'],

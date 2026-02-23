@@ -195,7 +195,9 @@ function runDP() {
       const n = state.nodes.find(x => x.id === evalNodeId);
       const children = (n && childrenMap[evalNodeId]) || [];
 
-      if (varName === 'val') return n ? n.weight : 0;
+      if (varName === 'val') return n ? ((n.weights || [0])[0] ?? 0) : 0;
+      const valMatch = varName.match(/^val(\d+)$/);
+      if (valMatch) return n ? ((n.weights || [])[parseInt(valMatch[1])] ?? 0) : 0;
       if (varName === 'id') return evalNodeId;
       if (varName === 'childCount') return children.length;
       if (varName === 'isLeaf') return children.length === 0 ? 1 : 0;
@@ -267,7 +269,7 @@ function runDP() {
           const pId = parentMap[evalNodeId]; if (!pId) return 0;
           if (args[0] && args[0].type === 'var') {
             const vn = args[0].name;
-            if (vn === 'val') { const pn = state.nodes.find(x => x.id === pId); return pn ? pn.weight : 0; }
+            if (vn === 'val') { const pn = state.nodes.find(x => x.id === pId); return pn ? ((pn.weights || [0])[0] ?? 0) : 0; }
             if (vn === 'children') return childrenMap[pId] || [];
             return results[pId]?.[vn] ?? resolve(pId, vn, currentDp, pId, locals);
           }
