@@ -49,7 +49,7 @@ function buildDocs() {
       [dc('range(n)'), 'Array [0, 1, ..., n-1].'],
       [dc('map(arr, expr)'), 'Map expression over array (element becomes eval context).'],
       [dc('filter(arr, expr)'), 'Keep elements where expr ≠ 0.'],
-      [dc('sort(arr, expr?)'), 'Sort array. If expr provided, sorts by mapped value.'],
+      [dc('sort(arr, expr?, "asc"|"desc"?)'), 'Sort array ascending (default). Pass "desc" as last arg for descending. If expr provided, sorts by mapped value.'],
       [dc('reverse(arr)'), 'Reverse array.'],
       [dc('concat(a, b)'), 'Concatenate two arrays.'],
       [dc('unique(arr)'), 'Remove duplicate values.'],

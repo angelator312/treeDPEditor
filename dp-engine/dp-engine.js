@@ -359,17 +359,25 @@ function runDP() {
         if (name === 'sort') {
           const arr = evSelf(args[0]);
           if (!Array.isArray(arr)) return [];
-          if (args.length < 2) {
+          // Detect optional trailing direction string: "asc" or "desc"
+          let dir = 1;
+          let numExprArgs = args.length;
+          if (args.length >= 2) {
+            const lastVal = evSelf(args[args.length - 1]);
+            if (lastVal === 'desc') { dir = -1; numExprArgs = args.length - 1; }
+            else if (lastVal === 'asc') { dir = 1; numExprArgs = args.length - 1; }
+          }
+          if (numExprArgs < 2) {
             // sort raw values
             return [...arr].sort((a, b) => {
               const an = typeof a === 'number' ? a : 0;
               const bn = typeof b === 'number' ? b : 0;
-              return an - bn;
+              return dir * (an - bn);
             });
           }
           const exprAst = args[1];
           const vals = arr.map(item => ev(exprAst, item));
-          return vals.sort((a, b) => a - b);
+          return vals.sort((a, b) => dir * (a - b));
         }
 
         if (name === 'reverse') {

@@ -44,7 +44,7 @@ An interactive **Graph Editor & Tree DP Visualizer** for competitive programming
 **Aggregation:** `sum`, `prod`, `max`, `min`, `count`, `avg`
 **Math:** `abs`, `floor`, `ceil`, `sqrt`, `log`, `log2`, `pow`, `mod`, `gcd`, `lcm`, `sign`, `clamp`
 **Access:** `par(var)`, `len(arr)`, `allNodes()`, `findNodes(condition)`
-**Arrays:** `range`, `map`, `filter`, `sort`, `reverse`, `concat`, `unique`, `flatten`, `prefix`, `suffix`, `slice`, `indexOf`
+**Arrays:** `range`, `map`, `filter`, `sort` (supports `"asc"`/`"desc"` as last arg), `reverse`, `concat`, `unique`, `flatten`, `prefix`, `suffix`, `slice`, `indexOf`
 
 ### Operators
 `+` `-` `*` `/` `%` `^` `==` `!=` `<` `>` `<=` `>=` `&&` `||` `!` `? :`
@@ -67,6 +67,9 @@ ans = par(ans) - sz + (n - sz) + down
 # Count nodes matching condition
 highWeightCount = len(findNodes(val > 5))
 leafCount = len(findNodes(isLeaf == 1))
+
+# Sort children by DP value descending
+topChild = sort(children, dp, "desc")[0]
 ```
 
 ## 🛠️ Setup for GitHub Pages
