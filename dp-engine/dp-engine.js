@@ -33,20 +33,13 @@ function quickParseDpDefs(code) {
       }
     });
 
-    // Parse regular groups and uppercase global definitions
+    // Parse regular groups
     processedLines.filter(l => l.includes('=') && !l.startsWith('__BUNDLE')).forEach(l => {
       const eqIdx = l.indexOf('=');
       // skip == and !=
       if (l[eqIdx + 1] === '=' || (eqIdx > 0 && l[eqIdx - 1] === '!')) return;
       const lhs = l.substring(0, eqIdx).trim();
       const rhs = l.substring(eqIdx + 1).trim();
-      // detect global uppercase assignment
-      if (/^[A-Z][A-Z0-9_]*$/.test(lhs)) {
-        // record name so display options might reflect it if needed
-        if (!state.specialVars) state.specialVars = {};
-        try { state.specialVars[lhs] = Parser.parse(rhs); } catch (e) { state.specialVars[lhs] = 0; }
-        return;
-      }
       let dpName;
       if (lhs.includes(':')) dpName = lhs.substring(0, lhs.indexOf(':')).trim();
       else dpName = lhs;
@@ -307,7 +300,10 @@ function runDP() {
       if (varName === 'n') return N;
       if (varName === 'param') return state.globalParam ?? 0;
       // uppercase-only identifiers are treated as global constants
-      if (isSpecialVarName(varName)) return state.specialVars && state.specialVars[varName] !== undefined ? state.specialVars[varName] : 0;
+      if (isSpecialVarName(varName)) {
+        if (state.specialVars && state.specialVars[varName] !== undefined) return state.specialVars[varName];
+        // fall through to normal per-node lookup if not set
+      }
       if (locals.has(varName)) return results[contextNodeId][`${currentDp}:${varName}`] || 0;
       return results[evalNodeId]?.[varName] ?? 0;
     };
@@ -583,11 +579,20 @@ function runDP() {
         const fn = u => { g.lines.forEach(line => { results[u][line.target] = evalAST(line.ast, u, g.name, u, g.locals); }); };
         if (g.isTopDown) roots.forEach(r => preOrder(r, fn));
         else roots.forEach(r => postOrder(r, fn));
+        // if group name is uppercase, record its root value as a special var
+        if (/^[A-Z][A-Z0-9_]*$/.test(g.name) && roots[0] !== undefined) {
+          if (!state.specialVars) state.specialVars = {};
+          state.specialVars[g.name] = results[roots[0]][g.name];
+        }
       });
       innerBundles.forEach(bundle => {
         const fn = u => { bundle.lines.forEach(line => { results[u][line.target] = evalAST(line.ast, u, bundle.name, u, bundle.locals); }); };
         if (bundle.isTopDown) roots.forEach(r => preOrder(r, fn));
         else roots.forEach(r => postOrder(r, fn));
+        if (/^[A-Z][A-Z0-9_]*$/.test(bundle.name) && roots[0] !== undefined) {
+          if (!state.specialVars) state.specialVars = {};
+          state.specialVars[bundle.name] = results[roots[0]][bundle.name];
+        }
       });
     };
 

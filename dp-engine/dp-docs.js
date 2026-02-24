@@ -18,7 +18,7 @@ function buildDocs() {
       [dc('subtreeSize'), 'Number of nodes in subtree (including self).'],
       [dc('n'), 'Total number of nodes in the tree.'],
       [dc('param'), 'Global numeric parameter set via the "param =" input above the code editor. Also updated automatically during bsearch().'],
-      [dc('ONLY_BIG_DIGITS'), 'Example of a reserved uppercase variable. Any name consisting entirely of capital letters (and underscores) is treated as a global constant.'],
+      [dc('ONLY_BIG_DIGITS'), 'Example of a special uppercase variable. Any name consisting entirely of capital letters (and underscores) is considered a per‑tree constant: its value (typically the root node’s DP result) is stored after each run and shown in batch output. Uppercase names may also be used as normal DP targets; in that case the root value becomes the constant.'],
     ]},
     { title: 'Aggregation', items: [
       [dc('sum(arr, expr?)'), 'Sum values. Maps expr over each element if provided.'],
