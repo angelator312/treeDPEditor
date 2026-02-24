@@ -517,8 +517,9 @@ function runDP() {
             const fn = u => {
               results[u][line.target] = evalAST(line.ast, u, g.name, u, g.locals);
             };
-            // always post-order since these definitions are bottom-up by default
-            roots.forEach(r => postOrder(r, fn));
+            // use the same traversal order as runInnerGroups normally would
+            if (g.isTopDown) roots.forEach(r => preOrder(r, fn));
+            else roots.forEach(r => postOrder(r, fn));
           });
         };
 

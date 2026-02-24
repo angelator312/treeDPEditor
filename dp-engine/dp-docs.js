@@ -49,7 +49,7 @@ function buildDocs() {
     ]},
     { title: 'Binary Search', items: [
       [dc('ans = bsearch(lo, hi, condition)'), 'Binary searches for the largest integer in [lo, hi] for which <em>condition</em> (evaluated at the root) is truthy. During each iteration, <code class="doc-code">param</code> is set to the current candidate. All other DP groups are re-run each iteration. After converging, the result is stored in <code class="doc-code">ans</code> at every node and <code class="doc-code">param</code> is left at the optimal value.'],
-      ['Example:', '<code class="doc-code">pass = isRoot ? param : max(par(pass) - val, 0) + par(pass)</code><br><code class="doc-code">ok = isLeaf ? (val &gt;= pass ? 1 : 0) : min(children, ok)</code><br><code class="doc-code">ans = bsearch(0, 1000000000, ok)</code>'],
+      ['Example:', '<code class="doc-code">pass = isRoot ? param : par(pass) + max({par(pass) - val, 0})</code><br><code class="doc-code">ok = isLeaf ? (val &gt;= pass ? 1 : 0) : min(children, ok)</code><br><code class="doc-code">ans = bsearch(0, 1000000000, ok)</code><br><em>Note:</em> <code>max</code> requires an array; use <code>max({a, b})</code> for numeric max.'],
     ]},
     { title: 'Array Builders', items: [
       [dc('range(n)'), 'Array [0, 1, ..., n-1].'],

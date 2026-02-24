@@ -10,7 +10,9 @@ const EXAMPLES = {
 # Each node absorbs up to val of the demand; surplus is passed to all children.
 # pass = demand received; ok = 1 if subtree handles demand, 0 otherwise
 # Set root val = 0 (root weight is handled separately in the final answer).
-pass = isRoot ? param : max(par(pass) - val, 0) + par(pass)
+# Note: ${"`max()`"} is an aggregator and expects an array.  Use array
+# literal syntax for a numeric max.
+pass = isRoot ? param : par(pass) + max({par(pass) - val, 0})
 ok = isLeaf ? (val >= pass ? 1 : 0) : min(children, ok)
 ans = bsearch(0, 1000000000, ok)`,
   bundle_example: `# Bundle Example (Interdependent DP)
