@@ -502,6 +502,26 @@ function runDP() {
     } else {
       // Execute bsearch groups
       bsearchGroups.forEach(g => {
+        // Lines that belong to this group other than the bsearch call itself.
+        // These need to be re-evaluated on every mid iteration because they may
+        // depend on the global `param` value.  Previously we treated them as
+        // "unusual" and only ran them once, which meant the condition used by
+        // bsearch could become stale.  That bug causes incorrect answers when
+        // the bsearch condition references variables defined earlier in the
+        // same group (e.g. the `pass`/`ok` example in the binary search sample).
+        const nonSearchLines = g.lines.filter(l => !isLineBsearch(l));
+
+        // Function to recompute all of those lines for the current param.
+        const evalNonSearch = () => {
+          nonSearchLines.forEach(line => {
+            const fn = u => {
+              results[u][line.target] = evalAST(line.ast, u, g.name, u, g.locals);
+            };
+            // always post-order since these definitions are bottom-up by default
+            roots.forEach(r => postOrder(r, fn));
+          });
+        };
+
         g.lines.forEach(line => {
           if (isLineBsearch(line)) {
             const bsNode = line.ast; // {type:'call', name:'bsearch', args:[lo, hi, cond]}
@@ -517,7 +537,9 @@ function runDP() {
             for (let iter = 0; iter <= 62 && L <= R; iter++) {
               const mid = L + Math.floor((R - L) / 2);
               state.globalParam = mid;
+              // recompute everything that might depend on `param`
               runInnerGroups();
+              evalNonSearch();
               const feasible = evalAST(condAst, rootId, g.name, rootId, g.locals);
               if (feasible) { bestAns = mid; L = mid + 1; }
               else R = mid - 1;
@@ -528,10 +550,10 @@ function runDP() {
             // Final run with optimal param so other displayed values reflect the answer
             state.globalParam = bestAns >= lo ? bestAns : lo;
             runInnerGroups();
+            evalNonSearch();
           } else {
-            // Non-bsearch line inside a bsearch group (unusual but handle gracefully)
-            const fn = u => { results[u][line.target] = evalAST(line.ast, u, g.name, u, g.locals); };
-            roots.forEach(r => postOrder(r, fn));
+            // non-search lines have already been handled inside evalNonSearch, so
+            // nothing more to do here in the outer iteration
           }
         });
       });
