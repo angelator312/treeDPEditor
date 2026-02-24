@@ -68,6 +68,9 @@ ans = par(ans) - sz + (n - sz) + down
 highWeightCount = len(findNodes(val > 5))
 leafCount = len(findNodes(isLeaf == 1))
 
+# get root weight using findNodes and map
+rootWeight = map(findNodes(isRoot == 1), val)[0]
+
 # Sort children by DP value descending
 topChild = sort(children, dp, "desc")[0]
 ```

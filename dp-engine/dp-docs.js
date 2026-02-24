@@ -45,7 +45,7 @@ function buildDocs() {
       [dc('par(var)'), 'Access a variable on the parent node. Triggers top-down evaluation.'],
       [dc('len(arr)'), 'Array length.'],
       [dc('allNodes()'), 'Returns array of all node IDs in the tree.'],
-      [dc('findNodes(condition)'), 'Returns array of node IDs where condition is true. Example: findNodes(val > 5)'],
+      [dc('findNodes(condition)'), 'Returns array of node IDs where condition is true. Example: findNodes(val > 5).  To access a node`s weight from the result you can combine with <code>map</code>, e.g. <code>map(findNodes(isRoot), val)[0]</code> obtains the root weight.'],
     ]},
     { title: 'Binary Search', items: [
       [dc('ans = bsearch(lo, hi, condition)'), 'Binary searches for the largest integer in [lo, hi] for which <em>condition</em> (evaluated at the root) is truthy. During each iteration, <code class="doc-code">param</code> is set to the current candidate. All other DP groups are re-run each iteration. After converging, the result is stored in <code class="doc-code">ans</code> at every node and <code class="doc-code">param</code> is left at the optimal value.'],
