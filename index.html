@@ -14,7 +14,7 @@
     <div class="modal">
       <h3 class="font-bold text-lg mb-2">Import / Reset</h3>
       <p class="text-xs mb-2" style="color:var(--muted)">Format A (edge list): Line 1 is <code>V E</code>, Line 2 is V weights, then E lines of edges (<code>u v w</code>).<br>Format B (parent array): Line 1 is <code>n</code>, Line 2 is n weights, Line 3 is <code>p2 p3 … pn</code> (parent of each node).</p>
-      <textarea id="importText" class="w-full" rows="6" placeholder="3 2&#10;1 2 3&#10;1 2 1&#10;2 3 1"></textarea>
+      <textarea id="importText" class="w-full" rows="6" placeholder="3 2\n1 2 3\n1 2 1\n2 3 1&#10;\nAlso supports CF multi-tree format: T, then for each tree: n, weights, parent-array"></textarea>
       <div class="flex justify-end gap-2 mt-3">
         <button id="btnResetSave" class="btn px-3 py-1.5 rounded text-xs mr-auto" style="background: var(--danger); color: white;">Reset Save</button>
         <button id="btnModalClose" class="btn px-3 py-1.5 rounded text-xs" style="background:var(--border)">Cancel</button>
