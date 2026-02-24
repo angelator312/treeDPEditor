@@ -98,28 +98,7 @@
         </div>
 
         <div id="tab-output" class="tab-content">
-                  <div id="tab-trees" class="tab-content hidden">
-                    <div class="output-panel">
-                      <div class="output-header text-xs font-semibold flex justify-between items-center">
-                        <span>Trees</span>
-                        <button id="btnAddTree" class="btn text-xs px-2 py-1 rounded font-medium" style="background: var(--accent); color: var(--bg);">+ Add Tree</button>
-                        <label for="importNewTreeInput" class="btn text-xs px-2 py-1 rounded font-medium" style="background: var(--border); color: var(--fg); cursor:pointer;">Import Tree<input id="importNewTreeInput" type="file" accept=".json,.txt" style="display:none"></label>
-                      </div>
-                      <div class="output-content p-2" id="treesList">
-                        <!-- Tree list will be rendered here -->
-                      </div>
-                      <div class="flex flex-wrap gap-2 mt-2">
-                        <button id="btnBatchDP" class="btn text-xs px-3 py-1 rounded font-medium" style="background: var(--accent); color: var(--bg);">Run DP on Selected</button>
-                        <button id="btnExportTree" class="btn text-xs px-3 py-1 rounded font-medium" style="background: var(--border); color: var(--fg);">Export Selected</button>
-                        <label for="importTreeInput" class="btn text-xs px-3 py-1 rounded font-medium" style="background: var(--border); color: var(--fg); cursor:pointer;">Import to Selected<input id="importTreeInput" type="file" accept=".json,.txt" style="display:none"></label>
-                        <span class="text-xs opacity-60">(Select trees below)</span>
-                      </div>
-                      <div id="batchDpResults" class="mt-2 text-xs"></div>
-                    </div>
-                    <div class="mt-2 text-xs opacity-60">
-                      Switch between trees, rename, delete, or select multiple for batch DP evaluation.
-                    </div>
-                  </div>
+                  
           <div class="grid grid-cols-3 gap-2 mb-3">
             <div class="text-center p-2 rounded" style="background: var(--card);">
               <div class="text-xl font-bold mono" style="color: var(--accent);" id="statNodes">0</div>
@@ -156,7 +135,28 @@
             <div class="output-content p-3 text-xs" id="docsContent"></div>
           </div>
         </div>
-
+        <div id="tab-trees" class="tab-content hidden">
+                    <div class="output-panel">
+                      <div class="output-header text-xs font-semibold flex justify-between items-center">
+                        <span>Trees</span>
+                        <button id="btnAddTree" class="btn text-xs px-2 py-1 rounded font-medium" style="background: var(--accent); color: var(--bg);">+ Add Tree</button>
+                        <label for="importNewTreeInput" class="btn text-xs px-2 py-1 rounded font-medium" style="background: var(--border); color: var(--fg); cursor:pointer;">Import Tree<input id="importNewTreeInput" type="file" accept=".json,.txt" style="display:none"></label>
+                      </div>
+                      <div class="output-content p-2" id="treesList">
+                        <!-- Tree list will be rendered here -->
+                      </div>
+                      <div class="flex flex-wrap gap-2 mt-2">
+                        <button id="btnBatchDP" class="btn text-xs px-3 py-1 rounded font-medium" style="background: var(--accent); color: var(--bg);">Run DP on Selected</button>
+                        <button id="btnExportTree" class="btn text-xs px-3 py-1 rounded font-medium" style="background: var(--border); color: var(--fg);">Export Selected</button>
+                        <label for="importTreeInput" class="btn text-xs px-3 py-1 rounded font-medium" style="background: var(--border); color: var(--fg); cursor:pointer;">Import to Selected<input id="importTreeInput" type="file" accept=".json,.txt" style="display:none"></label>
+                        <span class="text-xs opacity-60">(Select trees below)</span>
+                      </div>
+                      <div id="batchDpResults" class="mt-2 text-xs"></div>
+                    </div>
+                    <div class="mt-2 text-xs opacity-60">
+                      Switch between trees, rename, delete, or select multiple for batch DP evaluation.
+                    </div>
+                  </div>
         <div id="selInfo" class="hidden p-3 rounded-lg" style="background: var(--card); border: 1px solid var(--border);">
           <div class="flex justify-between items-center mb-2">
             <span class="text-xs font-semibold">Selected: <span id="selName" class="mono" style="color: var(--accent);"></span></span>
