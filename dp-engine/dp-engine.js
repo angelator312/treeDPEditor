@@ -133,6 +133,7 @@ function quickParseDpDefs(code) {
 function runDP() {
   if (!state.isTree) { alert('DP requires Tree Mode.'); return; }
   const code = document.getElementById('dpCode').value.trim();
+  console.log('runDP formula:', code.replace(/\n/g,' | '));
   const errorBox = document.getElementById('dpErrorBox');
   errorBox.classList.add('hidden');
   // reset special variables map
@@ -589,7 +590,9 @@ function runDP() {
         // if group name is uppercase, record its root value as a special var
         if (/^[A-Z][A-Z0-9_]*$/.test(g.name) && roots[0] !== undefined) {
           if (!state.specialVars) state.specialVars = {};
-          state.specialVars[g.name] = results[roots[0]][g.name];
+          const val = results[roots[0]][g.name];
+          console.log('SETTING SPECIAL', g.name, 'to', val);
+          state.specialVars[g.name] = val;
         }
       });
       innerBundles.forEach(bundle => {
@@ -598,7 +601,9 @@ function runDP() {
         else roots.forEach(r => postOrder(r, fn));
         if (/^[A-Z][A-Z0-9_]*$/.test(bundle.name) && roots[0] !== undefined) {
           if (!state.specialVars) state.specialVars = {};
-          state.specialVars[bundle.name] = results[roots[0]][bundle.name];
+          const val = results[roots[0]][bundle.name];
+          console.log('SETTING SPECIAL (bundle)', bundle.name, 'to', val);
+          state.specialVars[bundle.name] = val;
         }
       });
     };
@@ -668,6 +673,7 @@ function runDP() {
     }
 
     state.dpResults = results;
+    console.log('runDP complete, specialVars=', state.specialVars, 'results root=', results[roots[0]]);
     fullUpdate();
   } catch (err) {
     errorBox.textContent = err.message;
