@@ -1,6 +1,62 @@
 // =============================================
 // QUICK PARSE DP DEFS
 // =============================================
+const hasBsearch = (node) => {
+  if (!node) return false;
+  if (node.type === 'call' && node.name === 'bsearch') return true;
+  for (const k of ['cond', 't', 'f', 'arg', 'l', 'r', 'target', 'index']) if (node[k] && hasBsearch(node[k])) return true;
+  if (node.args) return node.args.some(hasBsearch);
+  if (node.items) return node.items.some(hasBsearch);
+  return false;
+};
+    // Detect top-down and bsearch
+    const hasPar = (node) => {
+      if (!node) return false;
+      if (node.type === 'call' && node.name === 'par') return true;
+      for (const k of ['cond', 't', 'f', 'arg', 'l', 'r', 'target', 'index']) if (node[k] && hasPar(node[k])) return true;
+      if (node.args) return node.args.some(hasPar);
+      if (node.items) return node.items.some(hasPar);
+      return false;
+    };
+
+    // Helpers for bsearch flexibility
+   
+
+    // return first bsearch call AST within `node`
+    const findBsearch = (node) => {
+      if (!node) return null;
+      if (node.type === 'call' && node.name === 'bsearch') return node;
+      for (const k of ['cond', 't', 'f', 'arg', 'l', 'r', 'target', 'index']) {
+        if (node[k]) {
+          const found = findBsearch(node[k]);
+          if (found) return found;
+        }
+      }
+      if (node.args) {
+        for (const a of node.args) {
+          const found = findBsearch(a);
+          if (found) return found;
+        }
+      }
+      if (node.items) {
+        for (const it of node.items) {
+          const found = findBsearch(it);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+
+    // count number of bsearch calls in AST
+    const countBsearch = (node) => {
+      if (!node) return 0;
+      let cnt = 0;
+      if (node.type === 'call' && node.name === 'bsearch') cnt++;
+      for (const k of ['cond', 't', 'f', 'arg', 'l', 'r', 'target', 'index']) if (node[k]) cnt += countBsearch(node[k]);
+      if (node.args) node.args.forEach(a => cnt += countBsearch(a));
+      if (node.items) node.items.forEach(i => cnt += countBsearch(i));
+      return cnt;
+    };
 function quickParseDpDefs(code) {
   if (!code) return;
   // clear any previously parsed uppercase globals
@@ -65,7 +121,7 @@ function quickParseDpDefs(code) {
 
     state.dpGroups = Object.values(groups);
     state.dpGroups.forEach(g => {
-      g.isBsearch = g.lines.some(l => l.ast && l.ast.type === 'call' && l.ast.name === 'bsearch');
+      g.isBsearch = g.lines.some(l => hasBsearch(l.ast));
       if (state.display[g.name] === undefined) state.display[g.name] = false;
     });
   } catch (e) { /* skip */ }
@@ -150,6 +206,12 @@ function runDP() {
     });
 
     state.dpGroups = Object.values(groups);
+    // detect bsearch and top-down after parsing
+    state.dpGroups.forEach(g => {
+      g.isBsearch = g.lines.some(l => hasBsearch(l.ast));
+      g.isTopDown = g.lines.some(line => !hasBsearch(line.ast) && hasPar(line.ast));
+      if (state.display[g.name] === undefined) state.display[g.name] = false;
+    });
     lastDpsLen = -1;
     updateDisplayOptions();
 
@@ -185,61 +247,6 @@ function runDP() {
 
     const N = state.nodes.length;
 
-    // Detect top-down and bsearch
-    const hasPar = (node) => {
-      if (!node) return false;
-      if (node.type === 'call' && node.name === 'par') return true;
-      for (const k of ['cond', 't', 'f', 'arg', 'l', 'r', 'target', 'index']) if (node[k] && hasPar(node[k])) return true;
-      if (node.args) return node.args.some(hasPar);
-      if (node.items) return node.items.some(hasPar);
-      return false;
-    };
-
-    // Helpers for bsearch flexibility
-    const hasBsearch = (node) => {
-      if (!node) return false;
-      if (node.type === 'call' && node.name === 'bsearch') return true;
-      for (const k of ['cond', 't', 'f', 'arg', 'l', 'r', 'target', 'index']) if (node[k] && hasBsearch(node[k])) return true;
-      if (node.args) return node.args.some(hasBsearch);
-      if (node.items) return node.items.some(hasBsearch);
-      return false;
-    };
-
-    // return first bsearch call AST within `node`
-    const findBsearch = (node) => {
-      if (!node) return null;
-      if (node.type === 'call' && node.name === 'bsearch') return node;
-      for (const k of ['cond', 't', 'f', 'arg', 'l', 'r', 'target', 'index']) {
-        if (node[k]) {
-          const found = findBsearch(node[k]);
-          if (found) return found;
-        }
-      }
-      if (node.args) {
-        for (const a of node.args) {
-          const found = findBsearch(a);
-          if (found) return found;
-        }
-      }
-      if (node.items) {
-        for (const it of node.items) {
-          const found = findBsearch(it);
-          if (found) return found;
-        }
-      }
-      return null;
-    };
-
-    // count number of bsearch calls in AST
-    const countBsearch = (node) => {
-      if (!node) return 0;
-      let cnt = 0;
-      if (node.type === 'call' && node.name === 'bsearch') cnt++;
-      for (const k of ['cond', 't', 'f', 'arg', 'l', 'r', 'target', 'index']) if (node[k]) cnt += countBsearch(node[k]);
-      if (node.args) node.args.forEach(a => cnt += countBsearch(a));
-      if (node.items) node.items.forEach(i => cnt += countBsearch(i));
-      return cnt;
-    };
 
     // clone AST and replace any bsearch call with literal value
     const substituteBsearch = (ast, val) => {
@@ -647,6 +654,11 @@ function runDP() {
             else roots.forEach(r => postOrder(r, u => {
               results[u][line.target] = evalAST(substituted, u, g.name, u, g.locals);
             }));
+            // record special variable value from root if name is uppercase
+            if (/^[A-Z][A-Z0-9_]*$/.test(g.name) && roots[0] !== undefined) {
+              if (!state.specialVars) state.specialVars = {};
+              state.specialVars[g.name] = results[roots[0]][g.name];
+            }
             state.globalParam = bestAns >= lo ? bestAns : lo;
             runInnerGroups();
             evalNonSearch();
