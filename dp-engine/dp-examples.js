@@ -5,6 +5,14 @@
 // EXAMPLES
 // =============================================
 const EXAMPLES = {
+  binary_search_on_tree: `# Binary Search on Tree (CF 1997/D style)
+# Find the maximum demand k the tree can absorb starting from the root.
+# Each node absorbs up to val of the demand; surplus is passed to all children.
+# pass = demand received; ok = 1 if subtree handles demand, 0 otherwise
+# Set root val = 0 (root weight is handled separately in the final answer).
+pass = isRoot ? param : max(par(pass) - val, 0) + par(pass)
+ok = isLeaf ? (val >= pass ? 1 : 0) : min(children, ok)
+ans = bsearch(0, 1000000000, ok)`,
   bundle_example: `# Bundle Example (Interdependent DP)
 # All lines in {} execute in order for each node
 {

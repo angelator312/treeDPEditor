@@ -62,7 +62,10 @@ function quickParseDpDefs(code) {
     });
 
     state.dpGroups = Object.values(groups);
-    state.dpGroups.forEach(g => { if (state.display[g.name] === undefined) state.display[g.name] = false; });
+    state.dpGroups.forEach(g => {
+      g.isBsearch = g.lines.some(l => l.ast && l.ast.type === 'call' && l.ast.name === 'bsearch');
+      if (state.display[g.name] === undefined) state.display[g.name] = false;
+    });
   } catch (e) { /* skip */ }
 }
 
@@ -164,7 +167,7 @@ function runDP() {
 
     const N = state.nodes.length;
 
-    // Detect top-down
+    // Detect top-down and bsearch
     const hasPar = (node) => {
       if (!node) return false;
       if (node.type === 'call' && node.name === 'par') return true;
@@ -173,15 +176,20 @@ function runDP() {
       if (node.items) return node.items.some(hasPar);
       return false;
     };
-    state.dpGroups.forEach(g => { g.isTopDown = g.lines.some(line => hasPar(line.ast)); });
+    const isLineBsearch = (line) => line.ast && line.ast.type === 'call' && line.ast.name === 'bsearch';
+    state.dpGroups.forEach(g => {
+      g.isBsearch = g.lines.some(isLineBsearch);
+      g.isTopDown = g.lines.some(line => !isLineBsearch(line) && hasPar(line.ast));
+    });
 
     // Results
     const results = {};
     state.nodes.forEach(n => results[n.id] = {});
 
-    // Separate bundles and regular groups
-    const bundles = state.dpGroups.filter(g => g.isBundle);
-    const regularGroups = state.dpGroups.filter(g => !g.isBundle);
+    // Separate groups: bsearch, inner-bundles, inner-regular
+    const bsearchGroups = state.dpGroups.filter(g => g.isBsearch);
+    const innerRegular = state.dpGroups.filter(g => !g.isBsearch && !g.isBundle);
+    const innerBundles = state.dpGroups.filter(g => !g.isBsearch && g.isBundle);
 
     // Execute DP groups
     const postOrder = (u, fn) => { childrenMap[u].forEach(c => postOrder(c, fn)); fn(u); };
@@ -201,11 +209,13 @@ function runDP() {
       if (varName === 'id') return evalNodeId;
       if (varName === 'childCount') return children.length;
       if (varName === 'isLeaf') return children.length === 0 ? 1 : 0;
+      if (varName === 'isRoot') return parentMap[evalNodeId] === null ? 1 : 0;
       if (varName === 'children') return children;
       if (varName === 'edgeWeight') return edgeWeightMap[evalNodeId] || 0;
       if (varName === 'depth') return depthMap[evalNodeId] || 0;
       if (varName === 'subtreeSize') return sizeMap[evalNodeId] || 1;
       if (varName === 'n') return N;
+      if (varName === 'param') return state.globalParam ?? 0;
       if (locals.has(varName)) return results[contextNodeId][`${currentDp}:${varName}`] || 0;
       return results[evalNodeId]?.[varName] ?? 0;
     };
@@ -465,29 +475,67 @@ function runDP() {
           return result;
         }
 
+        if (name === 'bsearch') throw new Error('bsearch() must be a standalone assignment: ans = bsearch(lo, hi, condition)');
         throw new Error(`Unknown function: ${name}`);
       }
 
       return 0;
     };
 
-    // Execute regular groups first
-    regularGroups.forEach(g => {
-      const fn = u => { g.lines.forEach(line => { results[u][line.target] = evalAST(line.ast, u, g.name, u, g.locals); }); };
-      if (g.isTopDown) roots.forEach(r => preOrder(r, fn));
-      else roots.forEach(r => postOrder(r, fn));
-    });
+    // Helper to run all inner (non-bsearch) groups in defined order
+    const runInnerGroups = () => {
+      innerRegular.forEach(g => {
+        const fn = u => { g.lines.forEach(line => { results[u][line.target] = evalAST(line.ast, u, g.name, u, g.locals); }); };
+        if (g.isTopDown) roots.forEach(r => preOrder(r, fn));
+        else roots.forEach(r => postOrder(r, fn));
+      });
+      innerBundles.forEach(bundle => {
+        const fn = u => { bundle.lines.forEach(line => { results[u][line.target] = evalAST(line.ast, u, bundle.name, u, bundle.locals); }); };
+        if (bundle.isTopDown) roots.forEach(r => preOrder(r, fn));
+        else roots.forEach(r => postOrder(r, fn));
+      });
+    };
 
-    // Execute bundles (process all lines in order for each node)
-    bundles.forEach(bundle => {
-      const fn = u => {
-        bundle.lines.forEach(line => {
-          results[u][line.target] = evalAST(line.ast, u, bundle.name, u, bundle.locals);
+    if (bsearchGroups.length === 0) {
+      // No bsearch: standard execution
+      runInnerGroups();
+    } else {
+      // Execute bsearch groups
+      bsearchGroups.forEach(g => {
+        g.lines.forEach(line => {
+          if (isLineBsearch(line)) {
+            const bsNode = line.ast; // {type:'call', name:'bsearch', args:[lo, hi, cond]}
+            if (!bsNode.args || bsNode.args.length < 3)
+              throw new Error('bsearch(lo, hi, condition) requires exactly 3 arguments');
+            const rootId = roots[0];
+            if (rootId === undefined) throw new Error('bsearch requires at least one root node');
+            // Evaluate lo/hi bounds (param doesn't affect these)
+            const lo = Math.floor(evalAST(bsNode.args[0], rootId, g.name, rootId, g.locals));
+            const hi = Math.floor(evalAST(bsNode.args[1], rootId, g.name, rootId, g.locals));
+            const condAst = bsNode.args[2];
+            let L = lo, R = hi, bestAns = lo - 1;
+            for (let iter = 0; iter <= 62 && L <= R; iter++) {
+              const mid = L + Math.floor((R - L) / 2);
+              state.globalParam = mid;
+              runInnerGroups();
+              const feasible = evalAST(condAst, rootId, g.name, rootId, g.locals);
+              if (feasible) { bestAns = mid; L = mid + 1; }
+              else R = mid - 1;
+            }
+            // Store bsearch result at all nodes
+            const finalVal = bestAns >= lo ? bestAns : lo - 1;
+            state.nodes.forEach(n => { results[n.id][line.target] = finalVal; });
+            // Final run with optimal param so other displayed values reflect the answer
+            state.globalParam = bestAns >= lo ? bestAns : lo;
+            runInnerGroups();
+          } else {
+            // Non-bsearch line inside a bsearch group (unusual but handle gracefully)
+            const fn = u => { results[u][line.target] = evalAST(line.ast, u, g.name, u, g.locals); };
+            roots.forEach(r => postOrder(r, fn));
+          }
         });
-      };
-      if (bundle.isTopDown) roots.forEach(r => preOrder(r, fn));
-      else roots.forEach(r => postOrder(r, fn));
-    });
+      });
+    }
 
     state.dpResults = results;
     fullUpdate();

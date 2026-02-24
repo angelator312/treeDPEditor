@@ -79,6 +79,11 @@
           </div>
           <div id="dpErrorBox" class="error-box hidden"></div>
           <div id="dpWarning" class="hidden text-xs mb-2 p-2 rounded" style="background: rgba(255,170,0,0.2); color: var(--orange);">Warning: Tree Mode is disabled. DP requires a tree structure.</div>
+          <div class="flex items-center gap-2 mb-2">
+            <label class="text-xs opacity-60 whitespace-nowrap" for="dpParam">param =</label>
+            <input type="number" id="dpParam" value="0" class="text-xs w-32" style="font-family: 'JetBrains Mono', monospace;" title="Global parameter usable in formulas as 'param'. Also set automatically by bsearch().">
+            <span class="text-xs opacity-40">global constant usable in formulas</span>
+          </div>
           <textarea id="dpCode" class="w-full text-xs" rows="8" placeholder="dp = val + sum(children, dp)" title="Press F to focus | Esc to unfocus | Ctrl+Enter to run"></textarea>
         </div>
       </div>

@@ -13,9 +13,11 @@ function buildDocs() {
       [dc('id'), 'Node ID.'],
       [dc('childCount'), 'Number of children.'],
       [dc('isLeaf'), '1 if leaf node, 0 otherwise.'],
+      [dc('isRoot'), '1 if root node (no parent), 0 otherwise.'],
       [dc('depth'), 'Depth from root (root = 0).'],
       [dc('subtreeSize'), 'Number of nodes in subtree (including self).'],
       [dc('n'), 'Total number of nodes in the tree.'],
+      [dc('param'), 'Global numeric parameter set via the "param =" input above the code editor. Also updated automatically during bsearch().'],
     ]},
     { title: 'Aggregation', items: [
       [dc('sum(arr, expr?)'), 'Sum values. Maps expr over each element if provided.'],
@@ -44,6 +46,10 @@ function buildDocs() {
       [dc('len(arr)'), 'Array length.'],
       [dc('allNodes()'), 'Returns array of all node IDs in the tree.'],
       [dc('findNodes(condition)'), 'Returns array of node IDs where condition is true. Example: findNodes(val > 5)'],
+    ]},
+    { title: 'Binary Search', items: [
+      [dc('ans = bsearch(lo, hi, condition)'), 'Binary searches for the largest integer in [lo, hi] for which <em>condition</em> (evaluated at the root) is truthy. During each iteration, <code class="doc-code">param</code> is set to the current candidate. All other DP groups are re-run each iteration. After converging, the result is stored in <code class="doc-code">ans</code> at every node and <code class="doc-code">param</code> is left at the optimal value.'],
+      ['Example:', '<code class="doc-code">pass = isRoot ? param : max(par(pass) - val, 0) + par(pass)</code><br><code class="doc-code">ok = isLeaf ? (val &gt;= pass ? 1 : 0) : min(children, ok)</code><br><code class="doc-code">ans = bsearch(0, 1000000000, ok)</code>'],
     ]},
     { title: 'Array Builders', items: [
       [dc('range(n)'), 'Array [0, 1, ..., n-1].'],
