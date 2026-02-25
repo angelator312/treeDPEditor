@@ -254,14 +254,10 @@ function runDP() {
       console.warn('runDP: no root found, falling back to all nodes');
       roots = state.nodes.map(n => n.id);
     }
-    // evaluate any special uppercase globals now that we know a root ID
-    if (state.specialVars) {
-      Object.keys(state.specialVars).forEach(k => {
-        try {
-          state.specialVars[k] = evalAST(state.specialVars[k], roots[0] || 0, '', roots[0] || 0, new Set());
-        } catch (e) { state.specialVars[k] = 0; }
-      });
-    }
+    // NOTE: do not eagerly evaluate AST-backed special vars here --
+    // they may depend on DP groups that haven't been computed yet.
+    // Evaluation of any AST values in `state.specialVars` is deferred
+    // to `runInnerGroups()` so globals can reference per-node DP results.
     const depthMap = {}, sizeMap = {};
     state.nodes.forEach(n => { depthMap[n.id] = 0; sizeMap[n.id] = 1; });
 
@@ -637,6 +633,17 @@ function runDP() {
           state.specialVars[bundle.name] = val;
         }
       });
+      // Evaluate any deferred AST-backed special vars now that inner groups
+      // have been computed so they can reference per-node DP results.
+      if (state.specialVars) {
+        Object.keys(state.specialVars).forEach(k => {
+          const cur = state.specialVars[k];
+          if (cur && typeof cur === 'object' && cur.type) {
+            try { state.specialVars[k] = evalAST(cur, roots[0] || 0, '', roots[0] || 0, new Set()); }
+            catch (e) { state.specialVars[k] = 0; }
+          }
+        });
+      }
     };
 
     console.log('innerRegular count', innerRegular.length, 'innerBundles', innerBundles.length, 'bsearchGroups', bsearchGroups.length);
