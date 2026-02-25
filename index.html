@@ -74,6 +74,7 @@
             <div class="flex gap-2">
               <button id="btnSaveFormula" class="btn text-xs px-2 py-1 rounded font-medium" style="background: var(--border); color: var(--text);" title="Save current formula">💾</button>
               <button id="btnDeleteFormula" class="btn text-xs px-2 py-1 rounded font-medium" style="background: var(--border); color: var(--text);" title="Delete saved formula">🗑️</button>
+              <button id="btnEditorKeyMode" class="btn text-xs px-2 py-1 rounded font-medium" style="background: var(--border); color: var(--fg);">Keys: VS Code</button>
               <button id="btnRunDp" class="btn text-xs px-3 py-1 rounded font-medium" style="background: var(--accent); color: var(--bg);">Run (Ctrl+Enter)</button>
             </div>
           </div>
@@ -84,7 +85,7 @@
             <input type="number" id="dpParam" value="0" class="text-xs w-32" style="font-family: 'JetBrains Mono', monospace;" title="Global parameter usable in formulas as 'param'. Also set automatically by bsearch().">
             <span class="text-xs opacity-40">global constant usable in formulas</span>
           </div>
-          <textarea id="dpCode" class="w-full text-xs" rows="8" placeholder="dp = val + sum(children, dp)" title="Press F to focus | Esc to unfocus | Ctrl+Enter to run"></textarea>
+          <textarea id="dpCode" class="w-full text-xs" rows="8" placeholder="dp = val + sum(children, dp)" title="F to focus | Esc to unfocus | Ctrl+Enter to run | Tab/Shift+Tab indent | Ctrl+Shift+K delete line | Alt+↑/↓ move line (VS Code mode)"></textarea>
         </div>
       </div>
 
@@ -198,6 +199,7 @@
   <script src="lib/state.js"></script>
   <script src="lib/graph.js"></script>
   <script src="lib/render.js"></script>
+  <script src="lib/editor-settings.js"></script>
   <script src="lib/events.js"></script>
 </body>
 </html>
