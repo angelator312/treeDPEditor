@@ -294,7 +294,11 @@ function runDP() {
     // pattern for uppercase-only variable names
     const isSpecialVarName = name => /^[A-Z][A-Z0-9_]*$/.test(name);
 
-    const isLineBsearch = (line) => line.ast && line.ast.type === 'call' && line.ast.name === 'bsearch';
+    // A line should be considered a bsearch line if its AST contains any
+    // bsearch() call (possibly nested inside a larger expression). The
+    // previous logic only detected top-level call nodes which missed cases
+    // like `ANS = bsearch(...) + map(...)`.
+    const isLineBsearch = (line) => line.ast && hasBsearch(line.ast);
     state.dpGroups.forEach(g => {
       g.isBsearch = g.lines.some(isLineBsearch);
       g.isTopDown = g.lines.some(line => !isLineBsearch(line) && hasPar(line.ast));
