@@ -172,11 +172,27 @@ function runDP() {
       }
       const lhs = l.substring(0, eqIdx).trim();
       const rhs = l.substring(eqIdx + 1).trim();
-      // global constant if all caps
+      // global constant if all caps. However, if the RHS contains a bsearch
+      // call we must keep it as a DP group so the engine can run the
+      // bsearch logic. Parse the RHS first and promote to a group when
+      // necessary.
       if (/^[A-Z][A-Z0-9_]*$/.test(lhs)) {
         console.log('    detected special var', lhs, '=', rhs);
-        if (!state.specialVars) state.specialVars = {};
-        try { state.specialVars[lhs] = Parser.parse(rhs); } catch (e) { state.specialVars[lhs] = { type: 'num', val: 0 }; }
+        let ast = null;
+        try { ast = Parser.parse(rhs); } catch (e) { ast = { type: 'num', val: 0 }; }
+        // If the expression contains a bsearch call, treat it as a DP group
+        // so that the bsearch execution path will handle it. Otherwise store
+        // it as a plain special variable (AST or value will be evaluated
+        // later once roots are known).
+        if (hasBsearch(ast)) {
+          // create a pseudo-group for this uppercase name so it participates
+          // in group processing (bsearch detection, substitution, etc.)
+          if (!groups[lhs]) groups[lhs] = { name: lhs, lines: [], locals: new Set(), isTopDown: false, isBundle: false };
+          groups[lhs].lines.push({ target: lhs, ast });
+        } else {
+          if (!state.specialVars) state.specialVars = {};
+          state.specialVars[lhs] = ast;
+        }
         return;
       }
       let dpName, isLocal = false;
