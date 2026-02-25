@@ -113,12 +113,19 @@
               <div class="text-xs opacity-60">Root</div>
             </div>
           </div>
+          <div class="text-center p-1 rounded mt-1" style="background: var(--card); font-size:10px;">
+            <div id="statSpecial" class="mono" style="color:var(--orange);">&nbsp;</div>
+          </div>
           <div class="output-panel">
             <div class="output-header flex justify-between items-center">
               <span class="text-xs font-semibold">CP Format</span>
               <button id="btnCopy" class="text-xs px-2 py-0.5 rounded" style="background: var(--accent-dim); color: var(--accent); cursor:pointer; border:none;">Copy</button>
             </div>
             <div class="output-content p-3"><pre id="textOutput" class="mono text-xs" style="color: var(--muted);">0 0</pre></div>
+          </div>
+          <div class="output-panel mt-2" style="display: none;">
+            <div class="output-header text-xs font-semibold">Groups</div>
+            <div class="output-content p-3" id="groupsInfo" style="font-size:10px;color:var(--muted);"></div>
           </div>
         </div>
 

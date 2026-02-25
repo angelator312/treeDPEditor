@@ -1,8 +1,66 @@
 // =============================================
 // QUICK PARSE DP DEFS
 // =============================================
+const hasBsearch = (node) => {
+  if (!node) return false;
+  if (node.type === 'call' && node.name === 'bsearch') return true;
+  for (const k of ['cond', 't', 'f', 'arg', 'l', 'r', 'target', 'index']) if (node[k] && hasBsearch(node[k])) return true;
+  if (node.args) return node.args.some(hasBsearch);
+  if (node.items) return node.items.some(hasBsearch);
+  return false;
+};
+    // Detect top-down and bsearch
+    const hasPar = (node) => {
+      if (!node) return false;
+      if (node.type === 'call' && node.name === 'par') return true;
+      for (const k of ['cond', 't', 'f', 'arg', 'l', 'r', 'target', 'index']) if (node[k] && hasPar(node[k])) return true;
+      if (node.args) return node.args.some(hasPar);
+      if (node.items) return node.items.some(hasPar);
+      return false;
+    };
+
+    // Helpers for bsearch flexibility
+   
+
+    // return first bsearch call AST within `node`
+    const findBsearch = (node) => {
+      if (!node) return null;
+      if (node.type === 'call' && node.name === 'bsearch') return node;
+      for (const k of ['cond', 't', 'f', 'arg', 'l', 'r', 'target', 'index']) {
+        if (node[k]) {
+          const found = findBsearch(node[k]);
+          if (found) return found;
+        }
+      }
+      if (node.args) {
+        for (const a of node.args) {
+          const found = findBsearch(a);
+          if (found) return found;
+        }
+      }
+      if (node.items) {
+        for (const it of node.items) {
+          const found = findBsearch(it);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+
+    // count number of bsearch calls in AST
+    const countBsearch = (node) => {
+      if (!node) return 0;
+      let cnt = 0;
+      if (node.type === 'call' && node.name === 'bsearch') cnt++;
+      for (const k of ['cond', 't', 'f', 'arg', 'l', 'r', 'target', 'index']) if (node[k]) cnt += countBsearch(node[k]);
+      if (node.args) node.args.forEach(a => cnt += countBsearch(a));
+      if (node.items) node.items.forEach(i => cnt += countBsearch(i));
+      return cnt;
+    };
 function quickParseDpDefs(code) {
   if (!code) return;
+  // clear any previously parsed uppercase globals
+  state.specialVars = {};
   try {
     const groups = {};
     const bundles = [];
@@ -31,11 +89,16 @@ function quickParseDpDefs(code) {
       }
     });
 
+    console.log('processedLines for parsing', processedLines);
     // Parse regular groups
     processedLines.filter(l => l.includes('=') && !l.startsWith('__BUNDLE')).forEach(l => {
+      console.log('  quickParseDpDefs processing line:', l);
       const eqIdx = l.indexOf('=');
-      // skip == and !=
-      if (l[eqIdx + 1] === '=' || (eqIdx > 0 && l[eqIdx - 1] === '!')) return;
+      // skip ==, !=, <=, >= comparisons
+      if (l[eqIdx + 1] === '=' || (eqIdx > 0 && ['!','<','>'].includes(l[eqIdx - 1]))) {
+        console.log('    skipped line as comparison');
+        return;
+      }
       const lhs = l.substring(0, eqIdx).trim();
       const rhs = l.substring(eqIdx + 1).trim();
       let dpName;
@@ -43,27 +106,16 @@ function quickParseDpDefs(code) {
       else dpName = lhs;
       if (!groups[dpName]) groups[dpName] = { name: dpName, lines: [], locals: new Set(), isTopDown: false, isBundle: false };
       if (lhs.includes(':')) groups[dpName].locals.add(lhs.split(':')[1].trim());
-      try { groups[dpName].lines.push({ target: lhs, ast: Parser.parse(rhs) }); } catch (e) { /* skip */ }
-    });
-
-    // Parse bundles
-    bundles.forEach((bundleLines, idx) => {
-      const bundleName = `__bundle_${idx}`;
-      const bundleGroup = { name: bundleName, lines: [], locals: new Set(), isTopDown: false, isBundle: true };
-      bundleLines.forEach(l => {
-        const eqIdx = l.indexOf('=');
-        if (l[eqIdx + 1] === '=' || (eqIdx > 0 && l[eqIdx - 1] === '!')) return;
-        const lhs = l.substring(0, eqIdx).trim();
-        const rhs = l.substring(eqIdx + 1).trim();
-        if (lhs.includes(':')) bundleGroup.locals.add(lhs.split(':')[1].trim());
-        try { bundleGroup.lines.push({ target: lhs, ast: Parser.parse(rhs) }); } catch (e) { /* skip */ }
-      });
-      groups[bundleName] = bundleGroup;
+      try {
+        groups[dpName].lines.push({ target: lhs, ast: Parser.parse(rhs) });
+      } catch (e) {
+        console.error('parse error for dp line', l, e);
+      }
     });
 
     state.dpGroups = Object.values(groups);
     state.dpGroups.forEach(g => {
-      g.isBsearch = g.lines.some(l => l.ast && l.ast.type === 'call' && l.ast.name === 'bsearch');
+      g.isBsearch = g.lines.some(l => hasBsearch(l.ast));
       if (state.display[g.name] === undefined) state.display[g.name] = false;
     });
   } catch (e) { /* skip */ }
@@ -75,8 +127,11 @@ function quickParseDpDefs(code) {
 function runDP() {
   if (!state.isTree) { alert('DP requires Tree Mode.'); return; }
   const code = document.getElementById('dpCode').value.trim();
+  console.log('runDP formula:', code.replace(/\n/g,' | '));
   const errorBox = document.getElementById('dpErrorBox');
   errorBox.classList.add('hidden');
+  // reset special variables map
+  state.specialVars = {};
 
   try {
     // Parse groups and bundles
@@ -107,18 +162,47 @@ function runDP() {
       }
     });
 
-    // Parse regular groups
+    // Parse regular groups and uppercase global definitions
     processedLines.filter(l => l.includes('=') && !l.startsWith('__BUNDLE')).forEach(l => {
+      console.log('  runDP parsing line:', l);
       const eqIdx = l.indexOf('=');
-      if (l[eqIdx + 1] === '=' || (eqIdx > 0 && l[eqIdx - 1] === '!') || (eqIdx > 0 && l[eqIdx - 1] === '<') || (eqIdx > 0 && l[eqIdx - 1] === '>')) return;
+      if (l[eqIdx + 1] === '=' || (eqIdx > 0 && ['!','<','>'].includes(l[eqIdx - 1]))) {
+        console.log('    skipped line as comparison');
+        return;
+      }
       const lhs = l.substring(0, eqIdx).trim();
       const rhs = l.substring(eqIdx + 1).trim();
+      // global constant if all caps. However, if the RHS contains a bsearch
+      // call we must keep it as a DP group so the engine can run the
+      // bsearch logic. Parse the RHS first and promote to a group when
+      // necessary.
+      if (/^[A-Z][A-Z0-9_]*$/.test(lhs)) {
+        console.log('    detected special var', lhs, '=', rhs);
+        let ast = null;
+        try { ast = Parser.parse(rhs); } catch (e) { ast = { type: 'num', val: 0 }; }
+        // If the expression contains a bsearch call, treat it as a DP group
+        // so that the bsearch execution path will handle it. Otherwise store
+        // it as a plain special variable (AST or value will be evaluated
+        // later once roots are known).
+        if (hasBsearch(ast)) {
+          // create a pseudo-group for this uppercase name so it participates
+          // in group processing (bsearch detection, substitution, etc.)
+          if (!groups[lhs]) groups[lhs] = { name: lhs, lines: [], locals: new Set(), isTopDown: false, isBundle: false };
+          groups[lhs].lines.push({ target: lhs, ast });
+        } else {
+          if (!state.specialVars) state.specialVars = {};
+          state.specialVars[lhs] = ast;
+        }
+        return;
+      }
       let dpName, isLocal = false;
       if (lhs.includes(':')) { dpName = lhs.substring(0, lhs.indexOf(':')).trim(); isLocal = true; } else dpName = lhs;
       if (!groups[dpName]) groups[dpName] = { name: dpName, lines: [], locals: new Set(), isTopDown: false, isBundle: false };
       if (isLocal) groups[dpName].locals.add(lhs.split(':')[1].trim());
-      try { groups[dpName].lines.push({ target: lhs, ast: Parser.parse(rhs) }); }
-      catch (err) { throw new Error(`Parse error in "${l}": ${err.message}`); }
+      try { groups[dpName].lines.push({ target: lhs, ast: Parser.parse(rhs) });
+        console.log('    added group', dpName);
+      }
+      catch (err) { console.error(`Parse error in "${l}": ${err.message}`); }
     });
 
     // Parse bundles
@@ -140,8 +224,20 @@ function runDP() {
     });
 
     state.dpGroups = Object.values(groups);
+    console.log('parsed dpGroups', state.dpGroups);
+    // detect bsearch and top-down after parsing
+    state.dpGroups.forEach(g => {
+      g.isBsearch = g.lines.some(l => hasBsearch(l.ast));
+      g.isTopDown = g.lines.some(line => !hasBsearch(line.ast) && hasPar(line.ast));
+      if (state.display[g.name] === undefined) state.display[g.name] = false;
+    });
     lastDpsLen = -1;
     updateDisplayOptions();
+    // update groups info panel if present
+    const gi = document.getElementById('groupsInfo');
+    if (gi) {
+      gi.textContent = state.dpGroups.map(g => `${g.name}: bsearch=${g.isBsearch}, lines=${g.lines.length}`).join('\n');
+    }
 
     // Build tree structures
     const childrenMap = {}, parentMap = {}, edgeWeightMap = {};
@@ -153,7 +249,19 @@ function runDP() {
     });
 
     // Compute depth and subtree size
-    const roots = state.nodes.filter(n => !parentMap[n.id]).map(n => n.id);
+    let roots = state.nodes.filter(n => !parentMap[n.id]).map(n => n.id);
+    if (roots.length === 0) {
+      console.warn('runDP: no root found, falling back to all nodes');
+      roots = state.nodes.map(n => n.id);
+    }
+    // evaluate any special uppercase globals now that we know a root ID
+    if (state.specialVars) {
+      Object.keys(state.specialVars).forEach(k => {
+        try {
+          state.specialVars[k] = evalAST(state.specialVars[k], roots[0] || 0, '', roots[0] || 0, new Set());
+        } catch (e) { state.specialVars[k] = 0; }
+      });
+    }
     const depthMap = {}, sizeMap = {};
     state.nodes.forEach(n => { depthMap[n.id] = 0; sizeMap[n.id] = 1; });
 
@@ -167,16 +275,30 @@ function runDP() {
 
     const N = state.nodes.length;
 
-    // Detect top-down and bsearch
-    const hasPar = (node) => {
-      if (!node) return false;
-      if (node.type === 'call' && node.name === 'par') return true;
-      for (const k of ['cond', 't', 'f', 'arg', 'l', 'r', 'target', 'index']) if (node[k] && hasPar(node[k])) return true;
-      if (node.args) return node.args.some(hasPar);
-      if (node.items) return node.items.some(hasPar);
-      return false;
+
+    // clone AST and replace any bsearch call with literal value
+    const substituteBsearch = (ast, val) => {
+      if (!ast) return ast;
+      if (ast.type === 'call' && ast.name === 'bsearch') {
+        return { type: 'num', val };
+      }
+      const clone = { ...ast };
+      ['cond','t','f','arg','l','r','target','index'].forEach(k => {
+        if (clone[k]) clone[k] = substituteBsearch(clone[k], val);
+      });
+      if (clone.args) clone.args = clone.args.map(a => substituteBsearch(a, val));
+      if (clone.items) clone.items = clone.items.map(i => substituteBsearch(i, val));
+      return clone;
     };
-    const isLineBsearch = (line) => line.ast && line.ast.type === 'call' && line.ast.name === 'bsearch';
+
+    // pattern for uppercase-only variable names
+    const isSpecialVarName = name => /^[A-Z][A-Z0-9_]*$/.test(name);
+
+    // A line should be considered a bsearch line if its AST contains any
+    // bsearch() call (possibly nested inside a larger expression). The
+    // previous logic only detected top-level call nodes which missed cases
+    // like `ANS = bsearch(...) + map(...)`.
+    const isLineBsearch = (line) => line.ast && hasBsearch(line.ast);
     state.dpGroups.forEach(g => {
       g.isBsearch = g.lines.some(isLineBsearch);
       g.isTopDown = g.lines.some(line => !isLineBsearch(line) && hasPar(line.ast));
@@ -216,6 +338,11 @@ function runDP() {
       if (varName === 'subtreeSize') return sizeMap[evalNodeId] || 1;
       if (varName === 'n') return N;
       if (varName === 'param') return state.globalParam ?? 0;
+      // uppercase-only identifiers are treated as global constants
+      if (isSpecialVarName(varName)) {
+        if (state.specialVars && state.specialVars[varName] !== undefined) return state.specialVars[varName];
+        // fall through to normal per-node lookup if not set
+      }
       if (locals.has(varName)) return results[contextNodeId][`${currentDp}:${varName}`] || 0;
       return results[evalNodeId]?.[varName] ?? 0;
     };
@@ -475,7 +602,10 @@ function runDP() {
           return result;
         }
 
-        if (name === 'bsearch') throw new Error('bsearch() must be a standalone assignment: ans = bsearch(lo, hi, condition)');
+        // bsearch calls are evaluated as part of the line-processing above;
+        // they should never reach the generic call handler.  If they do, just
+        // return 0 to avoid breaking the evaluator.
+        if (name === 'bsearch') return 0;
         throw new Error(`Unknown function: ${name}`);
       }
 
@@ -488,49 +618,57 @@ function runDP() {
         const fn = u => { g.lines.forEach(line => { results[u][line.target] = evalAST(line.ast, u, g.name, u, g.locals); }); };
         if (g.isTopDown) roots.forEach(r => preOrder(r, fn));
         else roots.forEach(r => postOrder(r, fn));
+        // if group name is uppercase, record its root value as a special var
+        if (/^[A-Z][A-Z0-9_]*$/.test(g.name) && roots[0] !== undefined) {
+          if (!state.specialVars) state.specialVars = {};
+          const val = results[roots[0]][g.name];
+          console.log('SETTING SPECIAL', g.name, 'to', val);
+          state.specialVars[g.name] = val;
+        }
       });
       innerBundles.forEach(bundle => {
         const fn = u => { bundle.lines.forEach(line => { results[u][line.target] = evalAST(line.ast, u, bundle.name, u, bundle.locals); }); };
         if (bundle.isTopDown) roots.forEach(r => preOrder(r, fn));
         else roots.forEach(r => postOrder(r, fn));
+        if (/^[A-Z][A-Z0-9_]*$/.test(bundle.name) && roots[0] !== undefined) {
+          if (!state.specialVars) state.specialVars = {};
+          const val = results[roots[0]][bundle.name];
+          console.log('SETTING SPECIAL (bundle)', bundle.name, 'to', val);
+          state.specialVars[bundle.name] = val;
+        }
       });
     };
 
+    console.log('innerRegular count', innerRegular.length, 'innerBundles', innerBundles.length, 'bsearchGroups', bsearchGroups.length);
     if (bsearchGroups.length === 0) {
       // No bsearch: standard execution
       runInnerGroups();
     } else {
       // Execute bsearch groups
       bsearchGroups.forEach(g => {
-        // Lines that belong to this group other than the bsearch call itself.
-        // These need to be re-evaluated on every mid iteration because they may
-        // depend on the global `param` value.  Previously we treated them as
-        // "unusual" and only ran them once, which meant the condition used by
-        // bsearch could become stale.  That bug causes incorrect answers when
-        // the bsearch condition references variables defined earlier in the
-        // same group (e.g. the `pass`/`ok` example in the binary search sample).
-        const nonSearchLines = g.lines.filter(l => !isLineBsearch(l));
+        // Lines that belong to this group other than any lines containing
+        // a bsearch call.  They must be recomputed each iteration since the
+        // condition may reference <code>param</code> or other globals.
+        const nonSearchLines = g.lines.filter(l => !hasBsearch(l.ast));
 
-        // Function to recompute all of those lines for the current param.
         const evalNonSearch = () => {
           nonSearchLines.forEach(line => {
             const fn = u => {
               results[u][line.target] = evalAST(line.ast, u, g.name, u, g.locals);
             };
-            // use the same traversal order as runInnerGroups normally would
             if (g.isTopDown) roots.forEach(r => preOrder(r, fn));
             else roots.forEach(r => postOrder(r, fn));
           });
         };
 
         g.lines.forEach(line => {
-          if (isLineBsearch(line)) {
-            const bsNode = line.ast; // {type:'call', name:'bsearch', args:[lo, hi, cond]}
-            if (!bsNode.args || bsNode.args.length < 3)
+          if (hasBsearch(line.ast)) {
+            if (countBsearch(line.ast) > 1) throw new Error('Only one bsearch() call allowed per expression');
+            const bsNode = findBsearch(line.ast);
+            if (!bsNode || !bsNode.args || bsNode.args.length < 3)
               throw new Error('bsearch(lo, hi, condition) requires exactly 3 arguments');
             const rootId = roots[0];
             if (rootId === undefined) throw new Error('bsearch requires at least one root node');
-            // Evaluate lo/hi bounds (param doesn't affect these)
             const lo = Math.floor(evalAST(bsNode.args[0], rootId, g.name, rootId, g.locals));
             const hi = Math.floor(evalAST(bsNode.args[1], rootId, g.name, rootId, g.locals));
             const condAst = bsNode.args[2];
@@ -538,29 +676,36 @@ function runDP() {
             for (let iter = 0; iter <= 62 && L <= R; iter++) {
               const mid = L + Math.floor((R - L) / 2);
               state.globalParam = mid;
-              // recompute everything that might depend on `param`
               runInnerGroups();
               evalNonSearch();
               const feasible = evalAST(condAst, rootId, g.name, rootId, g.locals);
               if (feasible) { bestAns = mid; L = mid + 1; }
               else R = mid - 1;
             }
-            // Store bsearch result at all nodes
             const finalVal = bestAns >= lo ? bestAns : lo - 1;
-            state.nodes.forEach(n => { results[n.id][line.target] = finalVal; });
-            // Final run with optimal param so other displayed values reflect the answer
+            // evaluate full expression with substitution
+            const substituted = substituteBsearch(line.ast, finalVal);
+            if (g.isTopDown) roots.forEach(r => preOrder(r, u => {
+              results[u][line.target] = evalAST(substituted, u, g.name, u, g.locals);
+            }));
+            else roots.forEach(r => postOrder(r, u => {
+              results[u][line.target] = evalAST(substituted, u, g.name, u, g.locals);
+            }));
+            // record special variable value from root if name is uppercase
+            if (/^[A-Z][A-Z0-9_]*$/.test(g.name) && roots[0] !== undefined) {
+              if (!state.specialVars) state.specialVars = {};
+              state.specialVars[g.name] = results[roots[0]][g.name];
+            }
             state.globalParam = bestAns >= lo ? bestAns : lo;
             runInnerGroups();
             evalNonSearch();
-          } else {
-            // non-search lines have already been handled inside evalNonSearch, so
-            // nothing more to do here in the outer iteration
           }
         });
       });
     }
 
     state.dpResults = results;
+    console.log('runDP complete, roots=', roots, 'specialVars=', state.specialVars, 'results root=', results[roots[0]]);
     fullUpdate();
   } catch (err) {
     errorBox.textContent = err.message;

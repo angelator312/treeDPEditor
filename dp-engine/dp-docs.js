@@ -18,6 +18,7 @@ function buildDocs() {
       [dc('subtreeSize'), 'Number of nodes in subtree (including self).'],
       [dc('n'), 'Total number of nodes in the tree.'],
       [dc('param'), 'Global numeric parameter set via the "param =" input above the code editor. Also updated automatically during bsearch().'],
+      [dc('ONLY_BIG_DIGITS'), 'Example of a special uppercase variable. Any name consisting entirely of capital letters (and underscores) is considered a per‑tree constant: its value (typically the root node’s DP result) is stored after each run and shown in batch output. Uppercase names may also be used as normal DP targets; in that case the root value becomes the constant.'],
     ]},
     { title: 'Aggregation', items: [
       [dc('sum(arr, expr?)'), 'Sum values. Maps expr over each element if provided.'],
@@ -48,8 +49,8 @@ function buildDocs() {
       [dc('findNodes(condition)'), 'Returns array of node IDs where condition is true. Example: findNodes(val > 5).  To access a node`s weight from the result you can combine with <code>map</code>, e.g. <code>map(findNodes(isRoot), val)[0]</code> obtains the root weight.'],
     ]},
     { title: 'Binary Search', items: [
-      [dc('ans = bsearch(lo, hi, condition)'), 'Binary searches for the largest integer in [lo, hi] for which <em>condition</em> (evaluated at the root) is truthy. During each iteration, <code class="doc-code">param</code> is set to the current candidate. All other DP groups are re-run each iteration. After converging, the result is stored in <code class="doc-code">ans</code> at every node and <code class="doc-code">param</code> is left at the optimal value.'],
-      ['Example:', '<code class="doc-code">pass = isRoot ? param : par(pass) + max({par(pass) - val, 0})</code><br><code class="doc-code">ok = isLeaf ? (val &gt;= pass ? 1 : 0) : min(children, ok)</code><br><code class="doc-code">ans = bsearch(0, 1000000000, ok)</code><br><em>Note:</em> <code>max</code> requires an array; use <code>max({a, b})</code> for numeric max.'],
+      [dc('ans = bsearch(lo, hi, condition)'), 'Binary searches for the largest integer in [lo, hi] for which <em>condition</em> (evaluated at the root) is truthy. During each iteration, <code class="doc-code">param</code> is set to the current candidate. All other DP groups are re-run each iteration. The <code>bsearch</code> call may appear inside a larger expression (e.g. <code>ANS = bsearch(...) + map(...)</code>). After converging, the result is stored in <code class="doc-code">ans</code> at every node and <code class="doc-code">param</code> is left at the optimal value. Uppercase identifiers are treated as global constants and can be used in the search condition.'],
+      ['Example:', '<code class="doc-code">pass = isRoot ? param : par(pass) + max({par(pass) - val, 0})</code><br><code class="doc-code">ok = isLeaf ? (val &gt;= pass ? 1 : 0) : min(children, ok)</code><br><code class="doc-code">ANS = bsearch(0, 1000000000, ok) + map(findNodes(isRoot),val) + ONLY_BIG_DIGITS</code><br><em>Note:</em> <code>max</code> requires an array; use <code>max({a, b})</code> for numeric max.'],
     ]},
     { title: 'Array Builders', items: [
       [dc('range(n)'), 'Array [0, 1, ..., n-1].'],

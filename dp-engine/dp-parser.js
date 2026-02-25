@@ -87,3 +87,8 @@ const Parser = {
     return result;
   }
 };
+
+// support Node.js require for testing
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { Parser };
+}
