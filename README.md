@@ -15,6 +15,7 @@ An interactive **Graph Editor & Tree DP Visualizer** for competitive programming
 - **CP Format Export** — Copy tree data in competitive programming format
 - **Undo/Redo, Import/Export, localStorage persistence**
 - **Example Files** — All example formulas available in the [`examples/`](examples/) folder
+- **C++ Solutions** — Tree DP problem solutions from Codeforces in the [`solutions/`](solutions/) folder
 
 ## 🚀 Quick Start
 
