@@ -89,11 +89,16 @@ function quickParseDpDefs(code) {
       }
     });
 
+    console.log('processedLines for parsing', processedLines);
     // Parse regular groups
     processedLines.filter(l => l.includes('=') && !l.startsWith('__BUNDLE')).forEach(l => {
+      console.log('  quickParseDpDefs processing line:', l);
       const eqIdx = l.indexOf('=');
-      // skip == and !=
-      if (l[eqIdx + 1] === '=' || (eqIdx > 0 && l[eqIdx - 1] === '!')) return;
+      // skip ==, !=, <=, >= comparisons
+      if (l[eqIdx + 1] === '=' || (eqIdx > 0 && ['!','<','>'].includes(l[eqIdx - 1]))) {
+        console.log('    skipped line as comparison');
+        return;
+      }
       const lhs = l.substring(0, eqIdx).trim();
       const rhs = l.substring(eqIdx + 1).trim();
       let dpName;
@@ -101,22 +106,11 @@ function quickParseDpDefs(code) {
       else dpName = lhs;
       if (!groups[dpName]) groups[dpName] = { name: dpName, lines: [], locals: new Set(), isTopDown: false, isBundle: false };
       if (lhs.includes(':')) groups[dpName].locals.add(lhs.split(':')[1].trim());
-      try { groups[dpName].lines.push({ target: lhs, ast: Parser.parse(rhs) }); } catch (e) { /* skip */ }
-    });
-
-    // Parse bundles
-    bundles.forEach((bundleLines, idx) => {
-      const bundleName = `__bundle_${idx}`;
-      const bundleGroup = { name: bundleName, lines: [], locals: new Set(), isTopDown: false, isBundle: true };
-      bundleLines.forEach(l => {
-        const eqIdx = l.indexOf('=');
-        if (l[eqIdx + 1] === '=' || (eqIdx > 0 && l[eqIdx - 1] === '!')) return;
-        const lhs = l.substring(0, eqIdx).trim();
-        const rhs = l.substring(eqIdx + 1).trim();
-        if (lhs.includes(':')) bundleGroup.locals.add(lhs.split(':')[1].trim());
-        try { bundleGroup.lines.push({ target: lhs, ast: Parser.parse(rhs) }); } catch (e) { /* skip */ }
-      });
-      groups[bundleName] = bundleGroup;
+      try {
+        groups[dpName].lines.push({ target: lhs, ast: Parser.parse(rhs) });
+      } catch (e) {
+        console.error('parse error for dp line', l, e);
+      }
     });
 
     state.dpGroups = Object.values(groups);
@@ -170,12 +164,17 @@ function runDP() {
 
     // Parse regular groups and uppercase global definitions
     processedLines.filter(l => l.includes('=') && !l.startsWith('__BUNDLE')).forEach(l => {
+      console.log('  runDP parsing line:', l);
       const eqIdx = l.indexOf('=');
-      if (l[eqIdx + 1] === '=' || (eqIdx > 0 && l[eqIdx - 1] === '!') || (eqIdx > 0 && l[eqIdx - 1] === '<') || (eqIdx > 0 && l[eqIdx - 1] === '>')) return;
+      if (l[eqIdx + 1] === '=' || (eqIdx > 0 && ['!','<','>'].includes(l[eqIdx - 1]))) {
+        console.log('    skipped line as comparison');
+        return;
+      }
       const lhs = l.substring(0, eqIdx).trim();
       const rhs = l.substring(eqIdx + 1).trim();
       // global constant if all caps
       if (/^[A-Z][A-Z0-9_]*$/.test(lhs)) {
+        console.log('    detected special var', lhs, '=', rhs);
         if (!state.specialVars) state.specialVars = {};
         try { state.specialVars[lhs] = Parser.parse(rhs); } catch (e) { state.specialVars[lhs] = { type: 'num', val: 0 }; }
         return;
@@ -184,8 +183,10 @@ function runDP() {
       if (lhs.includes(':')) { dpName = lhs.substring(0, lhs.indexOf(':')).trim(); isLocal = true; } else dpName = lhs;
       if (!groups[dpName]) groups[dpName] = { name: dpName, lines: [], locals: new Set(), isTopDown: false, isBundle: false };
       if (isLocal) groups[dpName].locals.add(lhs.split(':')[1].trim());
-      try { groups[dpName].lines.push({ target: lhs, ast: Parser.parse(rhs) }); }
-      catch (err) { throw new Error(`Parse error in "${l}": ${err.message}`); }
+      try { groups[dpName].lines.push({ target: lhs, ast: Parser.parse(rhs) });
+        console.log('    added group', dpName);
+      }
+      catch (err) { console.error(`Parse error in "${l}": ${err.message}`); }
     });
 
     // Parse bundles
@@ -207,6 +208,7 @@ function runDP() {
     });
 
     state.dpGroups = Object.values(groups);
+    console.log('parsed dpGroups', state.dpGroups);
     // detect bsearch and top-down after parsing
     state.dpGroups.forEach(g => {
       g.isBsearch = g.lines.some(l => hasBsearch(l.ast));
@@ -215,6 +217,11 @@ function runDP() {
     });
     lastDpsLen = -1;
     updateDisplayOptions();
+    // update groups info panel if present
+    const gi = document.getElementById('groupsInfo');
+    if (gi) {
+      gi.textContent = state.dpGroups.map(g => `${g.name}: bsearch=${g.isBsearch}, lines=${g.lines.length}`).join('\n');
+    }
 
     // Build tree structures
     const childrenMap = {}, parentMap = {}, edgeWeightMap = {};
@@ -226,7 +233,11 @@ function runDP() {
     });
 
     // Compute depth and subtree size
-    const roots = state.nodes.filter(n => !parentMap[n.id]).map(n => n.id);
+    let roots = state.nodes.filter(n => !parentMap[n.id]).map(n => n.id);
+    if (roots.length === 0) {
+      console.warn('runDP: no root found, falling back to all nodes');
+      roots = state.nodes.map(n => n.id);
+    }
     // evaluate any special uppercase globals now that we know a root ID
     if (state.specialVars) {
       Object.keys(state.specialVars).forEach(k => {
@@ -608,6 +619,7 @@ function runDP() {
       });
     };
 
+    console.log('innerRegular count', innerRegular.length, 'innerBundles', innerBundles.length, 'bsearchGroups', bsearchGroups.length);
     if (bsearchGroups.length === 0) {
       // No bsearch: standard execution
       runInnerGroups();
@@ -673,7 +685,7 @@ function runDP() {
     }
 
     state.dpResults = results;
-    console.log('runDP complete, specialVars=', state.specialVars, 'results root=', results[roots[0]]);
+    console.log('runDP complete, roots=', roots, 'specialVars=', state.specialVars, 'results root=', results[roots[0]]);
     fullUpdate();
   } catch (err) {
     errorBox.textContent = err.message;
