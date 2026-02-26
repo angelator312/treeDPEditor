@@ -5,16 +5,11 @@
 // EXAMPLES
 // =============================================
 const EXAMPLES = {
-  binary_search_on_tree: `# Binary Search on Tree (CF 1997/D style)
-# Find the maximum demand k the tree can absorb starting from the root.
-# Each node absorbs up to val of the demand; surplus is passed to all children.
-# pass = demand received; ok = 1 if subtree handles demand, 0 otherwise
-# Set root val = 0 (root weight is handled separately in the final answer).
-# Note: ${"`max()`"} is an aggregator and expects an array.  Use array
-# literal syntax for a numeric max.
+  binary_search_on_tree: `# Binary Search on Tree
+# Solution to D in Educational Codeforces Round 168 (Rated for Div. 2)
 pass = isRoot ? param : par(pass) + max({par(pass) - val, 0})
 ok = isLeaf ? (val >= pass ? 1 : 0) : min(children, ok)
-ans = bsearch(0, 1000000000, ok)`,
+ANS = bsearch(0, 1000000000, ok) + map(findNodes(isRoot),val)[0]`,
   bundle_example: `# Bundle Example (Interdependent DP)
 # All lines in {} execute in order for each node
 {
