@@ -75,6 +75,13 @@
               <button id="btnSaveFormula" class="btn text-xs px-2 py-1 rounded font-medium" style="background: var(--border); color: var(--text);" title="Save current formula">💾</button>
               <button id="btnDeleteFormula" class="btn text-xs px-2 py-1 rounded font-medium" style="background: var(--border); color: var(--text);" title="Delete saved formula">🗑️</button>
               <button id="btnRunDp" class="btn text-xs px-3 py-1 rounded font-medium" style="background: var(--accent); color: var(--bg);">Run (Ctrl+Enter)</button>
+              <label class="text-xs opacity-70 flex items-center gap-2" style="margin-left:8px;">
+                Key Mode
+                <select id="editorKeyMode" class="text-xs py-1 px-2" style="font-family: 'Space Grotesk', sans-serif;">
+                  <option value="common">Common</option>
+                  <option value="safe">Safe</option>
+                </select>
+              </label>
             </div>
           </div>
           <div id="dpErrorBox" class="error-box hidden"></div>
