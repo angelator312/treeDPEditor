@@ -130,6 +130,18 @@
             </div>
             <div class="output-content p-3"><pre id="textOutput" class="mono text-xs" style="color: var(--muted);">0 0</pre></div>
           </div>
+          <div class="output-panel mt-2">
+            <div class="output-header flex justify-between items-center">
+              <span class="text-xs font-semibold">Excalidraw Export</span>
+              <div class="flex gap-2">
+                <button id="btnCopyExcalidraw" class="text-xs px-2 py-0.5 rounded" style="background: var(--accent-dim); color: var(--accent);">Copy Excalidraw Elements</button>
+                <button id="btnDownloadExcalidraw" class="text-xs px-2 py-0.5 rounded" style="background: var(--border); color: var(--fg);">Download .excalidraw.json</button>
+              </div>
+            </div>
+            <div class="output-content p-3 text-xs">
+              <label class="text-xs"><input type="checkbox" id="tglExportLabels" checked> Include node & edge weights</label>
+            </div>
+          </div>
           <div class="output-panel mt-2" style="display: none;">
             <div class="output-header text-xs font-semibold">Groups</div>
             <div class="output-content p-3" id="groupsInfo" style="font-size:10px;color:var(--muted);"></div>
@@ -206,6 +218,7 @@
   <script src="lib/graph.js"></script>
   <script src="lib/render.js"></script>
   <script src="lib/editor-shortcuts.js"></script>
+  <script src="lib/export-excalidraw.js"></script>
   <script src="lib/events.js"></script>
 </body>
 </html>
