@@ -634,7 +634,8 @@ function runDP() {
       }
     };
 
-    if (bsearchGroups.length === 0) {      // No bsearch: standard execution
+    // No bsearch: standard execution
+    if (bsearchGroups.length === 0) {
       runInnerGroups();
     } else {
       // Execute bsearch groups
