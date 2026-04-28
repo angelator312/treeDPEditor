@@ -89,14 +89,11 @@ function quickParseDpDefs(code) {
       }
     });
 
-    console.log('processedLines for parsing', processedLines);
     // Parse regular groups
     processedLines.filter(l => l.includes('=') && !l.startsWith('__BUNDLE')).forEach(l => {
-      console.log('  quickParseDpDefs processing line:', l);
       const eqIdx = l.indexOf('=');
       // skip ==, !=, <=, >= comparisons
       if (l[eqIdx + 1] === '=' || (eqIdx > 0 && ['!','<','>'].includes(l[eqIdx - 1]))) {
-        console.log('    skipped line as comparison');
         return;
       }
       const lhs = l.substring(0, eqIdx).trim();
@@ -127,7 +124,6 @@ function quickParseDpDefs(code) {
 function runDP() {
   if (!state.isTree) { alert('DP requires Tree Mode.'); return; }
   const code = document.getElementById('dpCode').value.trim();
-  console.log('runDP formula:', code.replace(/\n/g,' | '));
   const errorBox = document.getElementById('dpErrorBox');
   errorBox.classList.add('hidden');
   // reset special variables map
@@ -164,10 +160,8 @@ function runDP() {
 
     // Parse regular groups and uppercase global definitions
     processedLines.filter(l => l.includes('=') && !l.startsWith('__BUNDLE')).forEach(l => {
-      console.log('  runDP parsing line:', l);
       const eqIdx = l.indexOf('=');
       if (l[eqIdx + 1] === '=' || (eqIdx > 0 && ['!','<','>'].includes(l[eqIdx - 1]))) {
-        console.log('    skipped line as comparison');
         return;
       }
       const lhs = l.substring(0, eqIdx).trim();
@@ -177,7 +171,6 @@ function runDP() {
       // bsearch logic. Parse the RHS first and promote to a group when
       // necessary.
       if (/^[A-Z][A-Z0-9_]*$/.test(lhs)) {
-        console.log('    detected special var', lhs, '=', rhs);
         let ast = null;
         try { ast = Parser.parse(rhs); } catch (e) { ast = { type: 'num', val: 0 }; }
         // If the expression contains a bsearch call, treat it as a DP group
@@ -199,9 +192,7 @@ function runDP() {
       if (lhs.includes(':')) { dpName = lhs.substring(0, lhs.indexOf(':')).trim(); isLocal = true; } else dpName = lhs;
       if (!groups[dpName]) groups[dpName] = { name: dpName, lines: [], locals: new Set(), isTopDown: false, isBundle: false };
       if (isLocal) groups[dpName].locals.add(lhs.split(':')[1].trim());
-      try { groups[dpName].lines.push({ target: lhs, ast: Parser.parse(rhs) });
-        console.log('    added group', dpName);
-      }
+      try { groups[dpName].lines.push({ target: lhs, ast: Parser.parse(rhs) }); }
       catch (err) { console.error(`Parse error in "${l}": ${err.message}`); }
     });
 
@@ -224,7 +215,6 @@ function runDP() {
     });
 
     state.dpGroups = Object.values(groups);
-    console.log('parsed dpGroups', state.dpGroups);
     // detect bsearch and top-down after parsing
     state.dpGroups.forEach(g => {
       g.isBsearch = g.lines.some(l => hasBsearch(l.ast));
@@ -618,7 +608,6 @@ function runDP() {
         if (/^[A-Z][A-Z0-9_]*$/.test(g.name) && roots[0] !== undefined) {
           if (!state.specialVars) state.specialVars = {};
           const val = results[roots[0]][g.name];
-          console.log('SETTING SPECIAL', g.name, 'to', val);
           state.specialVars[g.name] = val;
         }
       });
@@ -629,7 +618,6 @@ function runDP() {
         if (/^[A-Z][A-Z0-9_]*$/.test(bundle.name) && roots[0] !== undefined) {
           if (!state.specialVars) state.specialVars = {};
           const val = results[roots[0]][bundle.name];
-          console.log('SETTING SPECIAL (bundle)', bundle.name, 'to', val);
           state.specialVars[bundle.name] = val;
         }
       });
@@ -646,9 +634,7 @@ function runDP() {
       }
     };
 
-    console.log('innerRegular count', innerRegular.length, 'innerBundles', innerBundles.length, 'bsearchGroups', bsearchGroups.length);
-    if (bsearchGroups.length === 0) {
-      // No bsearch: standard execution
+    if (bsearchGroups.length === 0) {      // No bsearch: standard execution
       runInnerGroups();
     } else {
       // Execute bsearch groups
@@ -712,7 +698,6 @@ function runDP() {
     }
 
     state.dpResults = results;
-    console.log('runDP complete, roots=', roots, 'specialVars=', state.specialVars, 'results root=', results[roots[0]]);
     fullUpdate();
   } catch (err) {
     errorBox.textContent = err.message;

@@ -3,4 +3,4 @@
 # ans = total sum of distances when rerooted here
 sz = sum(children, sz) + 1
 down = sum(children, down + sz)
-ans = par(ans) - sz + (n - sz) + down
+ans = isRoot ? down : par(ans) + n - 2 * sz

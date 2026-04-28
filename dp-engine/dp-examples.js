@@ -5,16 +5,11 @@
 // EXAMPLES
 // =============================================
 const EXAMPLES = {
-  binary_search_on_tree: `# Binary Search on Tree (CF 1997/D style)
-# Find the maximum demand k the tree can absorb starting from the root.
-# Each node absorbs up to val of the demand; surplus is passed to all children.
-# pass = demand received; ok = 1 if subtree handles demand, 0 otherwise
-# Set root val = 0 (root weight is handled separately in the final answer).
-# Note: ${"`max()`"} is an aggregator and expects an array.  Use array
-# literal syntax for a numeric max.
+  binary_search_on_tree: `# Binary Search on Tree
+# Solution to D in Educational Codeforces Round 168 (Rated for Div. 2)
 pass = isRoot ? param : par(pass) + max({par(pass) - val, 0})
 ok = isLeaf ? (val >= pass ? 1 : 0) : min(children, ok)
-ans = bsearch(0, 1000000000, ok)`,
+ANS = bsearch(0, 1000000000, ok) + map(findNodes(isRoot),val)[0]`,
   bundle_example: `# Bundle Example (Interdependent DP)
 # All lines in {} execute in order for each node
 {
@@ -43,7 +38,7 @@ dp = val + sum(children, dp)`,
 # ans = total sum of distances when rerooted here
 sz = sum(children, sz) + 1
 down = sum(children, down + sz)
-ans = par(ans) - sz + (n - sz) + down`,
+ans = isRoot ? down : par(ans) + n - 2 * sz`,
   tree_coloring: `# Tree Coloring (k=3 colors)
 # dp = number of valid colorings of subtree
 # Each child must differ from parent: (k-1) choices per child
@@ -52,10 +47,12 @@ dp = isLeaf ? 1 : prod(children, 2 * dp)`,
 # down = longest downward path from this node
 # diam = diameter passing through this node
 down = max(children, down + 1, 0)
-diam = max(sort(children, down + 1), 0) + (len(children) >= 2 ? sort(children, down + 1)[len(children) - 2] : 0)`,
+diam = max(children, down + 1, 0) + (len(children) >= 2 ? sort(children, down + 1)[len(children) - 2] : 0)`,
   tree_matching: `# Tree Matching
 # dp0 = max matching if this node NOT matched
 # dp1 = max matching if this node IS matched to a child
+{
 dp0 = sum(children, max({dp0, dp1}))
-dp1 = max(children, sum(children, max({dp0, dp1})) - max({dp0, dp1}) + dp0 + 1, 0)`
+dp1 = dp0 + max(children, dp0 + 1 - max({dp0, dp1}), -dp0)
+}`
 };
